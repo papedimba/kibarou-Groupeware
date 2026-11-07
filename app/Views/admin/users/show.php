@@ -14,18 +14,18 @@ $id = (int) $target['id'];
         <span class="kb-avatar" aria-hidden="true"><?= e(initials((string) $target['first_name'], (string) $target['last_name'])) ?></span>
         <div>
             <h1><?= e($name) ?></h1>
-            <div class="text-secondary small"><?= e($target['email']) ?> · <?= $active ? '<span class="text-success">Actif</span>' : '<span class="text-alert">Désactivé</span>' ?></div>
+            <div class="text-secondary small"><?= e($target['email']) ?> · <?php [$statusLabel, $statusTone] = user_status($target); ?><span class="badge text-bg-<?= e($statusTone) ?>"><?= e($statusLabel) ?></span></div>
         </div>
     </div>
     <?php if (can('users.manage')): ?>
         <div class="d-flex flex-wrap gap-2">
             <a class="btn btn-primary" href="<?= e(url("/admin/users/$id/edit")) ?>"><i data-lucide="pencil" aria-hidden="true"></i> Modifier</a>
-            <form method="post" action="<?= e(url("/admin/users/$id/reset-link")) ?>" data-confirm="Envoyer un lien de réinitialisation du mot de passe à cet utilisateur ?">
+            <form method="post" action="<?= e(url("/admin/users/$id/reset-link")) ?>" data-confirm="Envoyer à <?= e($name) ?> un lien pour choisir un nouveau mot de passe ? Son mot de passe actuel reste valable tant que le lien n'est pas utilisé.">
                 <?= csrf_field() ?>
                 <button class="btn btn-outline-secondary" type="submit"><i data-lucide="key-round" aria-hidden="true"></i> Lien de réinitialisation</button>
             </form>
             <?php if ($id !== (int) $currentUser['id']): ?>
-                <form method="post" action="<?= e(url("/admin/users/$id/status")) ?>" data-confirm="<?= $active ? 'Désactiver ce compte ? Ses sessions seront fermées.' : 'Réactiver ce compte ?' ?>">
+                <form method="post" action="<?= e(url("/admin/users/$id/status")) ?>" data-confirm="<?= $active ? 'Désactiver le compte de ' . e($name) . ' ? Cette personne sera déconnectée immédiatement. Vous pourrez réactiver le compte.' : 'Réactiver le compte de ' . e($name) . ' ?' ?>" data-confirm-action="<?= $active ? 'Désactiver' : 'Activer' ?>"<?= $active ? ' data-confirm-danger' : '' ?>>
                     <?= csrf_field() ?>
                     <input type="hidden" name="status" value="<?= $active ? 'disabled' : 'active' ?>">
                     <button class="btn <?= $active ? 'btn-outline-danger' : 'btn-outline-success' ?>" type="submit">
@@ -57,7 +57,7 @@ $id = (int) $target['id'];
                 <div class="card-header d-flex justify-content-between align-items-center">
                     Sessions ouvertes (<?= count($sessions) ?>)
                     <?php if ($sessions !== []): ?>
-                        <form method="post" action="<?= e(url("/admin/users/$id/sessions/revoke")) ?>" data-confirm="Fermer toutes les sessions de cet utilisateur ?">
+                        <form method="post" action="<?= e(url("/admin/users/$id/sessions/revoke")) ?>" data-confirm="Fermer toutes les sessions de <?= e($name) ?> ? Cette personne devra se reconnecter sur chacun de ses appareils." data-confirm-action="Tout fermer" data-confirm-danger>
                             <?= csrf_field() ?>
                             <button class="btn btn-sm btn-outline-danger" type="submit">Tout fermer</button>
                         </form>

@@ -66,8 +66,13 @@ async function minContrast(p, selector) {
   assert.ok(await minContrast(mobile, '.kb-brand small') >= 4.5, 'contraste du sous-titre de connexion');
   await mobile.fill('#email', process.env.KB_EMAIL);
   await mobile.fill('#password', process.env.KB_PASSWORD);
-  await mobile.click('button[type=submit]');
+  // Tâche 4 : pas de double envoi sur réseau lent
+  await mobile.route('**/login', r => r.request().method() === 'POST' ? setTimeout(() => r.continue(), 800) : r.continue());
+  // noWaitAfter : vérifier le bouton de CETTE page, avant que la navigation n'aboutisse.
+  await mobile.click('button[type=submit]', { noWaitAfter: true });
+  assert.ok(await mobile.locator('button[type=submit]').isDisabled(), 'bouton désactivé pendant l\'envoi');
   await mobile.waitForURL(base + '/');
+  await mobile.unroute('**/login');
   const vw = mobile.viewportSize().width;
   for (const path of ['/admin/users', '/admin/users/create', '/profile']) {
     await mobile.goto(base + path);
@@ -83,6 +88,22 @@ async function minContrast(p, selector) {
   const status = mobile.locator('tbody .badge').first();
   const st = await status.boundingBox();
   assert.ok(st && st.x >= 0 && st.x + st.width <= vw, `statut visible sur mobile (${st && st.x + st.width} > ${vw})`);
+
+  // Tâche 4 : confirmation nommée dans une fenêtre de l'application ; Annuler n'envoie rien
+  await page.goto(base + '/admin/users?q=mariam');
+  await page.click('text=Cissé Mariam');
+  await page.click('button:has-text("Désactiver")');
+  const dialog = page.locator('#kb-confirm');
+  await dialog.waitFor({ state: 'visible' });
+  assert.match(await dialog.innerText(), /Mariam Cissé/);
+  await dialog.locator('button:has-text("Annuler")').click();
+  await dialog.waitFor({ state: 'hidden' });
+  await page.reload();
+  assert.ok(await page.locator('button:has-text("Désactiver")').isVisible(), 'compte toujours actif après Annuler');
+  await page.click('button:has-text("Lien de réinitialisation")');
+  await dialog.waitFor({ state: 'visible' });
+  await Promise.all([page.waitForNavigation(), dialog.locator('[data-kb-confirm-ok]').click()]);
+  assert.match(await page.locator('.alert').first().innerText(), /réinitialisation/, 'Confirmer envoie le formulaire');
 
   assert.deepStrictEqual(problems, [], 'aucune erreur console (CSP incluse)');
   await browser.close();

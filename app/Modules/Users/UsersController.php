@@ -41,10 +41,17 @@ final class UsersController extends Controller
         } catch (ValidationException $e) {
             return $this->back('/admin/users/create', $e->errors, $request->post);
         }
-        $msg = (string) $request->input('temp_password', '') !== ''
-            ? 'Compte créé. L\'utilisateur devra changer son mot de passe temporaire à la première connexion.'
-            : 'Compte créé. Un lien d\'activation a été mis en file d\'envoi par email.';
-        return $this->redirect('/admin/users/' . $id, $msg);
+        $temp = (string) $request->input('temp_password', '');
+        if ($temp !== '') {
+            // Récapitulatif affiché une seule fois, jamais stocké (ni session, ni flash).
+            return $this->view('admin/users/handover', [
+                'currentPath' => '/admin/users',
+                'target' => $this->repo()->find($id),
+                'tempPassword' => $temp,
+                'loginUrl' => rtrim((string) $this->app->config('app.url'), '/') . '/login',
+            ]);
+        }
+        return $this->redirect('/admin/users/' . $id, 'Compte créé. Un lien d\'activation a été mis en file d\'envoi par email.');
     }
 
     public function show(Request $request): Response

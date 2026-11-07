@@ -13,7 +13,10 @@ $this->layout('layouts/auth');
     </div>
     <div class="mb-3">
         <label class="form-label" for="password">Mot de passe</label>
-        <input class="form-control" type="password" id="password" name="password" autocomplete="current-password" required>
+        <div class="input-group">
+            <input class="form-control" type="password" id="password" name="password" autocomplete="current-password" required>
+            <button class="btn btn-outline-secondary kb-pass-toggle" type="button" data-toggle-password="password" aria-pressed="false" aria-label="Afficher le mot de passe"><i data-lucide="eye" aria-hidden="true"></i></button>
+        </div>
     </div>
     <button class="btn btn-primary w-100" type="submit">Se connecter</button>
 </form>

@@ -31,13 +31,85 @@
         if (event.key === 'Escape') { closeSidebar(); }
     });
 
-    // Confirmation avant les actions sensibles : <form data-confirm="Message">
+    // Confirmation des actions sensibles dans une fenêtre de l'application : <form data-confirm="Message">.
+    // Sans JavaScript, le formulaire s'envoie normalement.
+    var confirmEl = document.getElementById('kb-confirm');
+    var pendingForm = null;
     document.querySelectorAll('form[data-confirm]').forEach(function (form) {
         form.addEventListener('submit', function (event) {
-            if (!window.confirm(form.getAttribute('data-confirm'))) {
-                event.preventDefault();
-            }
+            if (form.dataset.confirmed === '1' || !confirmEl || !window.bootstrap) { return; }
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            pendingForm = form;
+            confirmEl.querySelector('[data-kb-confirm-text]').textContent = form.getAttribute('data-confirm');
+            var ok = confirmEl.querySelector('[data-kb-confirm-ok]');
+            ok.textContent = form.getAttribute('data-confirm-action') || 'Confirmer';
+            ok.className = 'btn ' + (form.hasAttribute('data-confirm-danger') ? 'btn-danger' : 'btn-primary');
+            window.bootstrap.Modal.getOrCreateInstance(confirmEl).show();
         });
+    });
+    if (confirmEl) {
+        confirmEl.querySelector('[data-kb-confirm-ok]').addEventListener('click', function () {
+            if (!pendingForm) { return; }
+            pendingForm.dataset.confirmed = '1';
+            window.bootstrap.Modal.getOrCreateInstance(confirmEl).hide();
+            pendingForm.requestSubmit();
+        });
+        confirmEl.addEventListener('hidden.bs.modal', function () { pendingForm = null; });
+    }
+
+    // Anti double envoi (réseau de chantier lent) : le bouton est désactivé après le premier envoi.
+    document.querySelectorAll('form').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (event.defaultPrevented) { return; }
+            if (form.dataset.sending === '1') { event.preventDefault(); return; }
+            form.dataset.sending = '1';
+            // shortcut: un bouton submit avec name/value perdrait sa valeur ; aucun n'en a aujourd'hui.
+            form.querySelectorAll('[type=submit]').forEach(function (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); });
+        });
+    });
+    // Retour arrière depuis le cache du navigateur : réactiver les boutons.
+    window.addEventListener('pageshow', function (event) {
+        if (!event.persisted) { return; }
+        document.querySelectorAll('form[data-sending]').forEach(function (form) {
+            delete form.dataset.sending;
+            form.querySelectorAll('[type=submit]').forEach(function (btn) { btn.disabled = false; btn.removeAttribute('aria-busy'); });
+        });
+    });
+
+    // Afficher / masquer un mot de passe : <button data-toggle-password="id-du-champ">
+    document.querySelectorAll('[data-toggle-password]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var input = document.getElementById(btn.getAttribute('data-toggle-password'));
+            var show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+            btn.setAttribute('aria-label', show ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+        });
+    });
+
+    // Générer un mot de passe temporaire lisible (sans caractères ambigus 0/O, 1/l/I).
+    document.querySelectorAll('[data-generate-password]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var letters = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ', digits = '23456789', all = letters + digits, out;
+            do {
+                var bytes = new Uint32Array(14);
+                window.crypto.getRandomValues(bytes);
+                out = Array.prototype.map.call(bytes, function (b) { return all[b % all.length]; }).join('');
+            } while (!/[a-zA-Z]/.test(out) || !/[0-9]/.test(out));
+            document.getElementById(btn.getAttribute('data-generate-password')).value = out;
+        });
+    });
+
+    // Copier / imprimer (récapitulatif de création de compte)
+    document.querySelectorAll('[data-copy]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var text = document.getElementById(btn.getAttribute('data-copy')).textContent;
+            navigator.clipboard.writeText(text).then(function () { btn.lastChild.textContent = ' Copié'; });
+        });
+    });
+    document.querySelectorAll('[data-print]').forEach(function (btn) {
+        btn.addEventListener('click', function () { window.print(); });
     });
 
     // Soumission automatique des filtres : <select data-autosubmit>

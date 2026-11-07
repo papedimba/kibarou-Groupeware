@@ -8,7 +8,8 @@ $isNew = $target === null;
 $title = $isNew ? 'Nouvel utilisateur' : 'Modifier ' . $target['first_name'] . ' ' . $target['last_name'];
 $this->layout('layouts/app', ['title' => $title, 'breadcrumbs' => [['Administration', '/admin'], ['Utilisateurs', '/admin/users'], [$isNew ? 'Nouveau' : 'Modifier', null]]]);
 $val = static fn (string $k) => $old[$k] ?? ($target[$k] ?? '');
-$selectedRoles = isset($old['roles']) ? array_map('intval', (array) $old['roles']) : $userRoleIds;
+$defaultRoles = $isNew ? array_map(static fn ($r) => (int) $r['id'], array_filter($roles, static fn ($r) => $r['slug'] === 'collaborateur')) : $userRoleIds;
+$selectedRoles = isset($old['roles']) ? array_map('intval', (array) $old['roles']) : $defaultRoles;
 $select = static function (string $name, string $label, array $options, string $labelKey) use ($val, $errors): string {
     $html = '<label class="form-label" for="' . $name . '">' . e($label) . '</label><select class="form-select' . invalid($errors, $name) . '" id="' . $name . '" name="' . $name . '"><option value="">—</option>';
     foreach ($options as $o) {
@@ -51,7 +52,10 @@ $select = static function (string $name, string $label, array $options, string $
                 <div class="card mt-4"><div class="card-header">Activation du compte</div><div class="card-body">
                     <p class="small text-secondary">Par défaut, un lien d'activation valable 72 heures est envoyé par email. Si l'email n'est pas encore opérationnel, vous pouvez définir un mot de passe temporaire : l'utilisateur devra le changer à sa première connexion.</p>
                     <label class="form-label" for="temp_password">Mot de passe temporaire (facultatif)</label>
-                    <input class="form-control<?= invalid($errors, 'temp_password') ?>" type="password" id="temp_password" name="temp_password" autocomplete="new-password">
+                    <div class="input-group">
+                        <input class="form-control<?= invalid($errors, 'temp_password') ?>" type="text" id="temp_password" name="temp_password" autocomplete="off" spellcheck="false">
+                        <button class="btn btn-outline-primary" type="button" data-generate-password="temp_password"><i data-lucide="wand-2" aria-hidden="true"></i> Générer</button>
+                    </div>
                     <?= field_error($errors, 'temp_password') ?>
                 </div></div>
             <?php endif; ?>
@@ -66,6 +70,7 @@ $select = static function (string $name, string $label, array $options, string $
                         <span>
                             <?= e($r['name']) ?>
                             <?php if ($r['description']): ?><span class="d-block small text-secondary"><?= e($r['description']) ?></span><?php endif; ?>
+                            <?php if ($r['slug'] === 'super_admin'): ?><span class="d-block small text-alert">Accès complet à toute l'application.</span><?php endif; ?>
                         </span>
                     </label>
                 <?php endforeach; ?>

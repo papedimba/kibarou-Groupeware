@@ -143,3 +143,12 @@ body { font-size: .9375rem; }
     .kb-table-stack td[colspan] { text-align: center; }
     .kb-table-stack td.small { font-size: inherit; }
 }
+
+/* Mot de passe à remettre : chasse fixe pour distinguer chaque caractère. */
+.kb-secret { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 1.15rem; letter-spacing: .06em; background: var(--kb-blue-soft); padding: .15rem .5rem; border-radius: 6px; }
+.kb-pass-toggle { min-width: 44px; }
+@media print {
+    .kb-sidebar, .kb-header, .kb-content .btn, .breadcrumb { display: none !important; }
+    .kb-content { padding: 0; }
+    .card { border: 0; box-shadow: none; }
+}

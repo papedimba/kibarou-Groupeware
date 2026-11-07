@@ -8,7 +8,10 @@ $this->layout('layouts/auth', ['title' => 'Nouveau mot de passe']);
     <?= csrf_field() ?>
     <div class="mb-3">
         <label class="form-label" for="password">Nouveau mot de passe</label>
-        <input class="form-control<?= invalid($errors, 'password') ?>" type="password" id="password" name="password" autocomplete="new-password" required autofocus>
+        <div class="input-group">
+            <input class="form-control<?= invalid($errors, 'password') ?>" type="password" id="password" name="password" autocomplete="new-password" required autofocus>
+            <button class="btn btn-outline-secondary kb-pass-toggle" type="button" data-toggle-password="password" aria-pressed="false" aria-label="Afficher le mot de passe"><i data-lucide="eye" aria-hidden="true"></i></button>
+        </div>
         <?= field_error($errors, 'password') ?>
     </div>
     <div class="mb-3">

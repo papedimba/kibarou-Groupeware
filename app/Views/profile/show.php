@@ -45,7 +45,7 @@ $this->layout('layouts/app', ['title' => 'Mon profil', 'breadcrumbs' => [['Mon p
                                 <?php if ($s['id'] === $currentSessionId): ?>
                                     <span class="badge text-bg-primary">Cette session</span>
                                 <?php else: ?>
-                                    <form method="post" action="<?= e(url('/profile/sessions/revoke')) ?>">
+                                    <form method="post" action="<?= e(url('/profile/sessions/revoke')) ?>" data-confirm="Fermer la session ouverte sur <?= e(device_label((string) $s['user_agent'])) ?> ?" data-confirm-action="Fermer la session">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="session_id" value="<?= e($s['id']) ?>">
                                         <button class="btn btn-sm btn-outline-danger" type="submit">Fermer</button>

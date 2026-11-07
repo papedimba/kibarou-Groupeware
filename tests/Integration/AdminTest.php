@@ -209,4 +209,29 @@ final class AdminTest extends IntegrationTestCase
         $body = $this->get('/admin/audit', ['action' => 'auth.login_failed'])->body;
         $this->assertStringContainsString('<td data-label="Par">Inconnu</td>', $body);
     }
+
+    public function testTempPasswordHandoverShownOnce(): void
+    {
+        $this->createUser('admin3@kibarou.test', ['admin']);
+        $this->login('admin3@kibarou.test', 'Motdepasse123');
+        $r = $this->post('/admin/users', [
+            'first_name' => 'Remise', 'last_name' => 'Compte', 'email' => 'remise@kibarou.test', 'temp_password' => 'Chantier2026xy',
+            'roles' => [(string) $this->roleId('collaborateur')],
+        ]);
+        $this->assertSame(200, $r->status);
+        $this->assertStringContainsString('remise@kibarou.test', $r->body);
+        $this->assertStringContainsString('Chantier2026xy', $r->body);
+        $this->assertStringContainsString('https://gw.test/login', $r->body);
+        $this->assertSame(0, (int) $this->app->db()->value('SELECT COUNT(*) FROM sessions WHERE data LIKE ?', ['%Chantier2026xy%']));
+        $id = (int) $this->app->db()->value("SELECT id FROM users WHERE email = 'remise@kibarou.test'");
+        $this->assertStringNotContainsString('Chantier2026xy', $this->get("/admin/users/$id")->body);
+    }
+
+    public function testCreateFormDefaultsToCollaborateur(): void
+    {
+        $this->createUser('admin4@kibarou.test', ['admin']);
+        $this->login('admin4@kibarou.test', 'Motdepasse123');
+        $body = $this->get('/admin/users/create')->body;
+        $this->assertMatchesRegularExpression('/value="' . $this->roleId('collaborateur') . '" id="role\d+"\s*checked/', $body);
+    }
 }

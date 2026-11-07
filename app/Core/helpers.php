@@ -85,6 +85,20 @@ function device_label(string $ua): string
     return $parts === [] ? 'Appareil inconnu' : implode(' · ', $parts);
 }
 
+/**
+ * Statut affiché d'un compte : libellé et couleur Bootstrap.
+ * @param array<string,mixed> $user
+ * @return array{0:string,1:string}
+ */
+function user_status(array $user): array
+{
+    return match (true) {
+        ($user['status'] ?? '') === 'disabled' => ['Désactivé', 'secondary'],
+        empty($user['last_login_at']) => ['Pas encore connecté', 'warning'],
+        default => ['Actif', 'success'],
+    };
+}
+
 /** Date courante UTC au format SQL. */
 function now_utc(): string
 {

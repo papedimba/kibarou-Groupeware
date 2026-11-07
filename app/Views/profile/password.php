@@ -17,7 +17,10 @@ $this->layout('layouts/app', ['title' => 'Mot de passe', 'breadcrumbs' => [['Mon
             </div>
             <div class="mb-3">
                 <label class="form-label" for="password">Nouveau mot de passe</label>
-                <input class="form-control<?= invalid($errors, 'password') ?>" type="password" id="password" name="password" autocomplete="new-password" required aria-describedby="pw-help">
+        <div class="input-group">
+            <input class="form-control<?= invalid($errors, 'password') ?>" type="password" id="password" name="password" autocomplete="new-password" required aria-describedby="pw-help">
+            <button class="btn btn-outline-secondary kb-pass-toggle" type="button" data-toggle-password="password" aria-pressed="false" aria-label="Afficher le mot de passe"><i data-lucide="eye" aria-hidden="true"></i></button>
+        </div>
                 <div id="pw-help" class="form-text">Au moins 10 caractères, avec au moins une lettre et un chiffre.</div>
                 <?= field_error($errors, 'password') ?>
             </div>

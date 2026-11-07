@@ -46,7 +46,7 @@ $this->layout('layouts/app', ['title' => 'Utilisateurs', 'breadcrumbs' => [['Adm
                     <td data-label="Service"><?= e($u['department_name'] ?? '—') ?></td>
                     <td data-label="Fonction"><?= e($u['position_title'] ?? '—') ?></td>
                     <td data-label="Rôles" class="small"><?= e($u['role_names'] ?? '—') ?></td>
-                    <td data-label="Statut"><?= $u['status'] === 'active' ? '<span class="badge text-bg-success">Actif</span>' : '<span class="badge text-bg-secondary">Désactivé</span>' ?></td>
+                    <td data-label="Statut"><?php [$statusLabel, $statusTone] = user_status($u); ?><span class="badge text-bg-<?= e($statusTone) ?>"><?= e($statusLabel) ?></span></td>
                     <td data-label="Dernière connexion" class="small"><?= e(format_date($u['last_login_at'])) ?></td>
                 </tr>
             <?php endforeach; ?>

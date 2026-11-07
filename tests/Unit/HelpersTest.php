@@ -26,4 +26,11 @@ final class HelpersTest extends TestCase
         $this->assertSame('Linux · Firefox', device_label('Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0'));
         $this->assertSame('Appareil inconnu', device_label(''));
     }
+
+    public function testUserStatus(): void
+    {
+        $this->assertSame(['Désactivé', 'secondary'], user_status(['status' => 'disabled', 'last_login_at' => '2026-01-01 00:00:00']));
+        $this->assertSame(['Pas encore connecté', 'warning'], user_status(['status' => 'active', 'last_login_at' => null]));
+        $this->assertSame(['Actif', 'success'], user_status(['status' => 'active', 'last_login_at' => '2026-01-01 00:00:00']));
+    }
 }
