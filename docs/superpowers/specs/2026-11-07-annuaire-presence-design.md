@@ -1,6 +1,6 @@
 # Lot 2 — Annuaire, organigramme et présence : conception
 
-Statut : rédigé le 07/11/2026, en attente d'approbation.
+Statut : rédigé le 07/11/2026, relu par un constructeur indépendant, complété des réponses de l'utilisateur ; en attente d'approbation.
 Références : cahier des charges, module 7 (Annuaire) ; `PRODUCT.md` ; `PLAN.md` (lot 2).
 
 ## 1. Intention
@@ -49,10 +49,18 @@ Permettre à chacun des ~50 collaborateurs de Kibarou Construction — au bureau
 
 ## 5. Ce qui a été décidé
 
+### 5.0 Le « responsable » d'une personne (décision de l'utilisateur)
+Partout où ce document parle du **responsable** d'une personne P, il s'agit de **l'un ou l'autre** :
+- son responsable hiérarchique direct (`users.manager_id` de P) ;
+- le responsable du service de P (`departments.manager_user_id` du service `users.department_id` de P ; service de P seulement, pas les services parents).
+
+Raison : les fiches seront souvent incomplètes au démarrage ; un chef de service doit voir et gérer son service dès le premier jour. Le cercle des personnes voyant un numéro personnel s'élargit d'autant, en connaissance de cause.
+
 ### 5.1 Accès
 - Nouvelle permission `directory.view`, attribuée par migration à **tous les rôles système** (super_admin implicite, admin, directeur, chef_service, collaborateur). Les rôles personnalisés peuvent l'avoir ou non.
 - Nouvelle entrée de menu « Annuaire » (icône `contact`), visible avec `directory.view`.
 - `users.view` (administration) reste distincte.
+- **Module « Annuaire »** (*choix de conception*) : la migration passe `modules.directory.is_enabled` à 1. L'accès aux pages dépend uniquement de `directory.view` ; les drapeaux de modules ne servent pour l'instant qu'à masquer ce qui n'existe pas encore (bouton « Écrire » tant que `modules.chat` vaut 0). Pas d'écran d'administration des modules avant le lot 10.
 
 ### 5.2 Annuaire (`GET /directory`)
 - Une seule page avec **tous les collaborateurs actifs** (non désactivés, non supprimés), triés par nom. Avec ~50 personnes, pas de pagination.
@@ -63,16 +71,16 @@ Permettre à chacun des ~50 collaborateurs de Kibarou Construction — au bureau
 
 ### 5.3 Fiche (`GET /directory/{id}`)
 - Photo, nom, fonction, service (lien vers son service dans l'organigramme), responsable hiérarchique (lien vers sa fiche), email, téléphone professionnel.
-- **Téléphone personnel** affiché uniquement au **responsable hiérarchique direct** de la personne, aux **administrateurs** (`users.manage`) et à **la personne elle-même**.
+- **Téléphone personnel** affiché uniquement au **responsable** de la personne (§5.0), aux **administrateurs** (`users.manage`) et à **la personne elle-même**. Il n'apparaît pas non plus dans les pages d'administration pour un simple détenteur de `users.view` (*choix de conception*).
 - Statut déclaré complet (libellé, chantier, note, « jusqu'au … ») et pastille « en ligne ».
 - Si le lecteur peut modifier le statut (§5.5) : bouton « Modifier le statut ».
 - Bouton « Écrire » : masqué tant que `modules.chat.is_enabled = 0`.
 - Collaborateur désactivé ou inexistant → 404 (page dans l'interface, lot 1).
 
 ### 5.4 Organigramme (`GET /directory/org`)
-- Arbre des **services actifs** (via `departments.parent_id`), chaque service affichant : son responsable (`manager_user_id`) en tête, puis ses membres actifs (triés par nom), avec photo/initiales, fonction et statut.
+- Arbre des **services actifs** (via `departments.parent_id`), chaque service affichant : son responsable (`manager_user_id`) en tête, puis ses membres actifs (triés par nom, le responsable n'y est pas répété), avec photo/initiales, fonction et statut.
 - Les collaborateurs **sans service** sont regroupés dans une section finale « Sans service ».
-- Mobile : services repliables (`<details>/<summary>` natif, sans JS) ; tous repliés sauf celui de l'utilisateur.
+- Services repliables (`<details>/<summary>` natif, sans JS). Sur ordinateur tous ouverts ; sur téléphone tous repliés sauf celui de l'utilisateur (*choix de conception* : l'attribut `open` est posé côté serveur pour le service de l'utilisateur, et un petit script ferme les autres sous 768 px ; sans JS, tout est ouvert).
 - Un service est affiché même vide s'il a des sous-services ; un service vide sans sous-service est masqué.
 
 ### 5.5 Présence
@@ -89,11 +97,11 @@ Permettre à chacun des ~50 collaborateurs de Kibarou Construction — au bureau
 | `set_by` | INT NULL, FK users ON DELETE SET NULL | Auteur de la déclaration |
 | `updated_at` | DATETIME (UTC) | |
 
-- **Validité** : sans `until_date`, le statut vaut pour **le jour de sa déclaration**, jour calculé dans le fuseau `APP_TIMEZONE`. Avec `until_date` (≥ aujourd'hui, ≤ aujourd'hui + 90 jours), il vaut jusqu'à ce jour inclus.
+- **Validité** : toute déclaration **commence le jour même** ; pas de déclaration à l'avance (*décision de l'utilisateur* : les congés planifiés arriveront avec les demandes de congé du lot 9). Sans `until_date`, le statut vaut pour **le jour de sa déclaration**, jour calculé dans le fuseau `APP_TIMEZONE`. Avec `until_date` (≥ aujourd'hui, ≤ aujourd'hui + 90 jours), il vaut jusqu'à ce jour inclus. Une nouvelle déclaration remplace la précédente.
 - **Affichage** : un statut expiré n'est **jamais affiché** (filtré à la lecture), même si le nettoyage n'est pas encore passé. Sans statut valide : « Statut non renseigné ».
-- **Nettoyage** : `cron:run` supprime les statuts expirés (dans `Maintenance`).
-- **Qui peut modifier** le statut d'une personne : elle-même ; son **responsable hiérarchique direct** (`users.manager_id`) ; tout détenteur de `users.manage`. Contrôle côté serveur pour chaque modification.
-- **Mise à jour groupée** : un responsable voit, depuis l'accueil, la liste de ses subordonnés directs et peut leur appliquer un même statut (ex. « Sur chantier : Résidence Les Palmiers ») en une validation.
+- **Nettoyage** : `cron:run` supprime les statuts expirés et ceux des comptes désactivés (dans `Maintenance`).
+- **Qui peut modifier** le statut d'une personne : elle-même ; son **responsable** (§5.0) ; tout détenteur de `users.manage`. Contrôle côté serveur pour chaque modification.
+- **Mise à jour groupée** : un responsable voit, depuis l'accueil, la liste des personnes dont il est le responsable (§5.0) et peut leur appliquer un même statut (ex. « Sur chantier : Résidence Les Palmiers ») en une validation. Chaque personne a une case à cocher ; celles qui ont déjà un statut valable sont **décochées par défaut** et leur statut actuel est affiché à côté, pour ne jamais écraser une information juste par mégarde (*choix de conception*). Une ligne d'audit par personne modifiée.
 - **Audit** : toute modification faite par quelqu'un d'autre que la personne → `presence.updated` (avec la personne visée). Les modifications par la personne elle-même ne sont pas journalisées (trop de bruit, faible sensibilité).
 - **Où modifier** : sélecteur rapide en tête de l'accueil (statuts en boutons de 44 px ; chantier, note et date dans un petit formulaire déplié pour « Sur chantier », « En déplacement », « En congé ») ; aussi depuis « Mon profil » et la fiche annuaire. « Effacer mon statut » disponible.
 
@@ -109,7 +117,7 @@ Permettre à chacun des ~50 collaborateurs de Kibarou Construction — au bureau
 - Libellés d'audit : `phone_personal` → « Téléphone personnel » dans `AuditLabels::FIELDS`.
 
 ### 5.7 Photo de profil
-- Téléversement : par la personne (profil) ; remplacement ou retrait par un administrateur (`users.manage`, fiche utilisateur).
+- Téléversement : par la personne (profil) ; téléversement, remplacement ou retrait par un administrateur (`users.manage`, fiche utilisateur).
 - Contrôles : taille ≤ 5 Mo ; type détecté par `finfo` parmi `image/jpeg`, `image/png`, `image/webp` (jamais le type déclaré par le navigateur) ; décodage par GD obligatoire (un fichier qui ne se décode pas est refusé) ; dimensions source ≤ 6000×6000.
 - Traitement : recadrage carré centré, redimensionnement à **256×256**, réencodage **WebP** (qualité ~82) — supprime EXIF/GPS et tout contenu non image.
 - Stockage : `storage/private/avatars/<id>-<jeton aléatoire>.webp` ; le chemin relatif va dans `users.avatar_path` ; l'ancien fichier est supprimé au remplacement.
@@ -118,7 +126,7 @@ Permettre à chacun des ~50 collaborateurs de Kibarou Construction — au bureau
 
 ### 5.8 Accueil
 - Sélecteur rapide du statut en tête.
-- Pour un responsable ayant des subordonnés directs : bloc « Mon équipe aujourd'hui » (statut de chacun + mise à jour groupée).
+- Pour un responsable (§5.0) : bloc « Mon équipe aujourd'hui » (statut de chacun + mise à jour groupée).
 
 ## 6. Laissé au constructeur
 
