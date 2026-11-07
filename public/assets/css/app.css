@@ -46,7 +46,8 @@
 
 body { font-size: .9375rem; }
 .btn-primary { --bs-btn-bg: var(--kb-blue); --bs-btn-border-color: var(--kb-blue); --bs-btn-hover-bg: #1d4ed8; --bs-btn-hover-border-color: #1d4ed8; --bs-btn-active-bg: #1e40af; }
-.btn-warning, .badge-alert { background: var(--kb-orange); border-color: var(--kb-orange); color: #fff; }
+.btn-warning { background: var(--kb-orange); border-color: var(--kb-orange); color: #fff; }
+.badge-alert { background: #fff1e7; color: #a33a06; font-weight: 600; }
 .text-alert { color: var(--kb-orange) !important; }
 .lucide { width: 18px; height: 18px; stroke-width: 2; vertical-align: -3px; }
 :focus-visible { outline: 3px solid rgba(37, 99, 235, .45); outline-offset: 2px; }

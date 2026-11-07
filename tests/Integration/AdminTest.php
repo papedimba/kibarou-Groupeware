@@ -186,4 +186,27 @@ final class AdminTest extends IntegrationTestCase
         }
         $this->assertSame(404, $this->get('/admin/users/999999')->status);
     }
+
+    public function testAuditLogIsReadable(): void
+    {
+        $this->createUser('lecteur@kibarou.test', ['admin']);
+        $this->login('lecteur@kibarou.test', 'Motdepasse123');
+        $body = $this->get('/admin/audit')->body;
+        $this->assertStringContainsString('Connexion', $body);
+        $this->assertStringContainsString('Test Lecteur', $body);
+        $this->assertStringNotContainsString('auth.login</code>', $body);
+        $this->assertStringNotContainsString('{&quot;', $body);
+        $this->assertSame(200, $this->get('/admin/audit', ['action' => 'auth.login'])->status);
+    }
+
+    public function testFailedLoginIsNotAttributedToTheAccountOwner(): void
+    {
+        $this->createUser('cible@kibarou.test');
+        $this->login('cible@kibarou.test', 'mauvais');
+        $this->cookies = [];
+        $this->createUser('admin2@kibarou.test', ['admin']);
+        $this->login('admin2@kibarou.test', 'Motdepasse123');
+        $body = $this->get('/admin/audit', ['action' => 'auth.login_failed'])->body;
+        $this->assertStringContainsString('<td data-label="Par">Inconnu</td>', $body);
+    }
 }

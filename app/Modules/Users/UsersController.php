@@ -60,7 +60,9 @@ final class UsersController extends Controller
             'position' => $target['position_id'] ? $this->org()->position((int) $target['position_id']) : null,
             'manager' => $target['manager_id'] ? $this->repo()->find((int) $target['manager_id']) : null,
             'audit' => can('audit.view') ? $this->app->db()->fetchAll(
-                'SELECT * FROM audit_logs WHERE entity_type = ? AND entity_id = ? ORDER BY id DESC LIMIT 20',
+                "SELECT a.*, CONCAT(u.first_name, ' ', u.last_name) AS user_name, CONCAT(t.first_name, ' ', t.last_name) AS target_name
+                 FROM audit_logs a LEFT JOIN users u ON u.id = a.user_id LEFT JOIN users t ON t.id = a.entity_id
+                 WHERE a.entity_type = ? AND a.entity_id = ? ORDER BY a.id DESC LIMIT 20",
                 ['user', $id],
             ) : [],
         ]);

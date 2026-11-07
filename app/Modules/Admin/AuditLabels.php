@@ -1,0 +1,77 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Admin;
+
+/** Traduit les codes du journal d'audit en français lisible par un administrateur non technique. */
+final class AuditLabels
+{
+    private const LABELS = [
+        'auth.login' => 'Connexion',
+        'auth.login_failed' => 'Échec de connexion',
+        'auth.login_disabled' => 'Connexion refusée (compte désactivé)',
+        'auth.throttled' => 'Connexion bloquée (trop de tentatives)',
+        'auth.logout' => 'Déconnexion',
+        'auth.password_changed' => 'Mot de passe modifié',
+        'auth.reset_requested' => 'Réinitialisation demandée',
+        'auth.reset_completed' => 'Mot de passe réinitialisé',
+        'auth.invitation_sent' => 'Lien d\'activation envoyé',
+        'install.super_admin_created' => 'Installation : super administrateur créé',
+        'profile.updated' => 'Profil modifié',
+        'profile.session_revoked' => 'Session fermée par l\'utilisateur',
+        'user.created' => 'Compte créé',
+        'user.updated' => 'Compte modifié',
+        'user.enabled' => 'Compte activé',
+        'user.disabled' => 'Compte désactivé',
+        'user.reset_link_sent' => 'Lien de réinitialisation envoyé',
+        'user.sessions_revoked' => 'Sessions fermées',
+        'role.saved' => 'Rôle enregistré',
+        'role.deleted' => 'Rôle supprimé',
+        'department.created' => 'Service créé',
+        'department.updated' => 'Service modifié',
+        'position.created' => 'Fonction créée',
+        'position.updated' => 'Fonction modifiée',
+    ];
+
+    private const ALERTS = ['auth.login_failed', 'auth.login_disabled', 'auth.throttled', 'user.disabled', 'user.sessions_revoked'];
+
+    private const DETAIL_KEYS = ['email' => 'Email', 'count' => 'Nombre', 'changes' => 'Champs modifiés', 'name' => 'Nom', 'slug' => 'Identifiant'];
+
+    public static function label(string $action): string
+    {
+        return self::LABELS[$action] ?? $action;
+    }
+
+    public static function isAlert(string $action): bool
+    {
+        return in_array($action, self::ALERTS, true);
+    }
+
+    /** @return array<string,string> */
+    public static function all(): array
+    {
+        $labels = self::LABELS;
+        asort($labels);
+        return $labels;
+    }
+
+    /**
+     * Détails JSON en paires libellé / valeur ; les listes d'identifiants (rôles, permissions) sont omises.
+     * @return list<array{0:string,1:string}>
+     */
+    public static function details(?string $json): array
+    {
+        $data = $json !== null ? json_decode($json, true) : null;
+        if (!is_array($data)) {
+            return [];
+        }
+        $pairs = [];
+        foreach (self::DETAIL_KEYS as $key => $label) {
+            if (isset($data[$key]) && $data[$key] !== [] && $data[$key] !== '') {
+                $pairs[] = [$label, is_array($data[$key]) ? implode(', ', array_map('strval', $data[$key])) : (string) $data[$key]];
+            }
+        }
+        return $pairs;
+    }
+}

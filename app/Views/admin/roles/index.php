@@ -8,7 +8,7 @@ $this->layout('layouts/app', ['title' => 'Rôles et permissions', 'breadcrumbs' 
 </div>
 <div class="card"><div class="table-responsive">
     <table class="table table-hover mb-0 align-middle">
-        <thead><tr><th>Rôle</th><th>Identifiant</th><th>Utilisateurs</th><th>Permissions</th><th></th></tr></thead>
+        <thead><tr><th>Rôle</th><th>Utilisateurs</th><th>Permissions</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($roles as $r): ?>
             <tr>
@@ -17,7 +17,6 @@ $this->layout('layouts/app', ['title' => 'Rôles et permissions', 'breadcrumbs' 
                     <?php if ((int) $r['is_system'] === 1): ?><span class="badge text-bg-light ms-1">système</span><?php endif; ?>
                     <div class="small text-secondary"><?= e($r['description'] ?? '') ?></div>
                 </td>
-                <td><code><?= e($r['slug']) ?></code></td>
                 <td><?= (int) $r['user_count'] ?></td>
                 <td><?= $r['slug'] === 'super_admin' ? 'Toutes' : (int) $r['permission_count'] ?></td>
                 <td class="text-end text-nowrap">

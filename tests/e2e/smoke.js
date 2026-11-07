@@ -75,6 +75,9 @@ async function minContrast(p, selector) {
   }
   assert.ok(await minContrast(mobile, '.kb-nav-title') >= 4.5, 'contraste des titres du menu');
   assert.ok(await minContrast(mobile, '.text-secondary') >= 4.5, 'contraste du texte secondaire');
+  await mobile.goto(base + '/admin/audit?action=auth.login_failed');
+  assert.ok(await mobile.locator('.badge-alert').count() > 0, 'badge d\'alerte présent');
+  assert.ok(await minContrast(mobile, '.badge-alert') >= 4.5, 'contraste du badge d\'alerte');
   // Tâche 1 : le statut des utilisateurs reste visible sur téléphone
   await mobile.goto(base + '/admin/users');
   const status = mobile.locator('tbody .badge').first();

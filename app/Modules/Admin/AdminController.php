@@ -49,8 +49,8 @@ final class AdminController extends Controller
         $where = ['1 = 1'];
         $params = [];
         if (($filters['action'] ?? '') !== '') {
-            $where[] = 'a.action LIKE ?';
-            $params[] = addcslashes($filters['action'], '%_\\') . '%';
+            $where[] = 'a.action = ?';
+            $params[] = $filters['action'];
         }
         if (($filters['user_id'] ?? 0) > 0) {
             $where[] = 'a.user_id = ?';
@@ -60,8 +60,9 @@ final class AdminController extends Controller
         $db = $this->app->db();
         $total = (int) $db->value("SELECT COUNT(*) FROM audit_logs a WHERE $sql", $params);
         $items = $db->fetchAll(
-            "SELECT a.*, CONCAT(u.first_name, ' ', u.last_name) AS user_name
+            "SELECT a.*, CONCAT(u.first_name, ' ', u.last_name) AS user_name, CONCAT(t.first_name, ' ', t.last_name) AS target_name
              FROM audit_logs a LEFT JOIN users u ON u.id = a.user_id
+             LEFT JOIN users t ON a.entity_type = 'user' AND t.id = a.entity_id
              WHERE $sql ORDER BY a.id DESC LIMIT $perPage OFFSET " . Paginator::offset($page, $perPage),
             $params,
         );

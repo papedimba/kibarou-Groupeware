@@ -40,7 +40,7 @@ $moduleNames = ['admin' => 'Administration', 'users' => 'Utilisateurs', 'organiz
                     <?php foreach ($perms as $p): ?>
                         <label class="kb-check-row" for="perm<?= (int) $p['id'] ?>">
                             <input class="form-check-input" type="checkbox" name="permissions[]" value="<?= (int) $p['id'] ?>" id="perm<?= (int) $p['id'] ?>"<?= in_array((int) $p['id'], $checked, true) ? ' checked' : '' ?>>
-                            <span><?= e($p['description']) ?> <code class="small">(<?= e($p['slug']) ?>)</code></span>
+                            <span><?= e($p['description']) ?></span>
                         </label>
                     <?php endforeach; ?>
                 </fieldset>
