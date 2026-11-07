@@ -1,0 +1,110 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use App\Core\App;
+use App\Core\Migrator;
+use App\Modules\Install\Installer;
+use App\Services\Mailer;
+use App\Services\Maintenance;
+
+if (PHP_SAPI !== 'cli') {
+    exit(1);
+}
+
+$root = dirname(__DIR__);
+require $root . '/vendor/autoload.php';
+$app = App::boot($root);
+$command = $argv[1] ?? 'help';
+
+/** Lecture d'une saisie console ; masquée pour les mots de passe quand le terminal le permet. */
+function prompt(string $label, bool $hidden = false): string
+{
+    echo $label . ' : ';
+    $tty = $hidden && stream_isatty(STDIN);
+    if ($tty) {
+        shell_exec('stty -echo');
+    }
+    $value = trim((string) fgets(STDIN));
+    if ($tty) {
+        shell_exec('stty echo');
+        echo PHP_EOL;
+    }
+    return $value;
+}
+
+try {
+    switch ($command) {
+        case 'migrate':
+            $applied = (new Migrator($app->db(), (string) $app->config('paths.migrations')))->migrate();
+            echo $applied === [] ? "Base à jour.\n" : 'Migrations appliquées : ' . implode(', ', $applied) . "\n";
+            break;
+
+        case 'admin:create':
+            $installer = new Installer($app->db(), (string) $app->config('paths.migrations'), (int) $app->config('auth.password_min_length'));
+            if (!$installer->needsInstall()) {
+                fwrite(STDERR, "Un super administrateur existe déjà. Utilisez l'interface d'administration.\n");
+                exit(1);
+            }
+            $id = $installer->createSuperAdmin([
+                'email' => prompt('Email'),
+                'first_name' => prompt('Prénom'),
+                'last_name' => prompt('Nom'),
+                'password' => prompt('Mot de passe', true),
+                'password_confirmation' => prompt('Confirmation', true),
+            ]);
+            echo "Super administrateur créé (id $id).\n";
+            break;
+
+        case 'cron:run':
+            // Verrou fichier : deux exécutions CRON ne se chevauchent jamais.
+            $lock = fopen($root . '/storage/cache/cron.lock', 'c');
+            if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) {
+                echo "Une exécution est déjà en cours.\n";
+                break;
+            }
+            $queue = $app->mailQueue();
+            $queue->releaseStale();
+            $mailer = new Mailer((array) $app->config('mail'), (string) $app->config('paths.storage') . '/logs');
+            $stats = $queue->process(
+                [$mailer, 'send'],
+                (int) $app->config('mail.batch_size'),
+                (int) $app->config('mail.max_attempts'),
+            );
+            $cleaned = (new Maintenance($app->db(), (array) $app->config('retention'), (array) $app->config('session')))->run();
+            $app->db()->run(
+                "INSERT INTO settings (`key`, `value`, updated_at) VALUES ('cron_last_run', ?, UTC_TIMESTAMP())
+                 ON DUPLICATE KEY UPDATE `value` = VALUES(`value`), updated_at = VALUES(updated_at)",
+                [now_utc()],
+            );
+            echo sprintf("Emails envoyés : %d, échecs : %d. Nettoyage : %s\n", $stats['sent'], $stats['failed'], json_encode($cleaned));
+            flock($lock, LOCK_UN);
+            break;
+
+        case 'seed:demo':
+            if ($app->config('app.env') === 'production') {
+                fwrite(STDERR, "Refusé : les données de démonstration sont interdites en production.\n");
+                exit(1);
+            }
+            require $root . '/database/seeds/demo.php';
+            break;
+
+        default:
+            echo <<<TXT
+            Kibarou Groupware — commandes disponibles :
+              migrate        Applique les migrations en attente
+              admin:create   Crée le premier super administrateur (interactif)
+              cron:run       Envoi des emails en file + nettoyage (à planifier toutes les 5 minutes)
+              seed:demo      Charge des données de démonstration (hors production)
+
+            TXT;
+    }
+} catch (App\Core\ValidationException $e) {
+    fwrite(STDERR, implode("\n", $e->errors) . "\n");
+    exit(1);
+} catch (Throwable $e) {
+    $app->logger()->error('console ' . $command . ' : ' . $e->getMessage());
+    fwrite(STDERR, 'Erreur : ' . $e->getMessage() . "\n");
+    exit(1);
+}

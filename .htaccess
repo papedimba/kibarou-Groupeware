@@ -1,0 +1,10 @@
+# Filet de sécurité si la racine web pointe sur le dossier du projet au lieu de public/ :
+# tout est redirigé vers public/, et aucun fichier hors de public/ n'est servi.
+Options -Indexes
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+<IfModule !mod_rewrite.c>
+    Require all denied
+</IfModule>

@@ -1,0 +1,24 @@
+# Front controller : toute requête qui n'est pas un fichier existant passe par index.php.
+Options -Indexes -MultiViews
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Forcer HTTPS (désactiver si l'hébergeur le gère déjà en amont)
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L,QSA]
+</IfModule>
+
+# Fichiers cachés et sensibles jamais servis
+<FilesMatch "^\.|\.(env|log|sql|bak|ini|sh|md|lock|dist)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    <FilesMatch "\.(css|js|woff2|svg|png|jpg|webp)$">
+        Header set Cache-Control "public, max-age=604800"
+    </FilesMatch>
+</IfModule>

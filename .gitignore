@@ -1,0 +1,9 @@
+/vendor/
+/.env
+/storage/logs/*
+/storage/cache/*
+/storage/temp/*
+/storage/private/*
+!/storage/*/.gitkeep
+/.phpunit.cache/
+/tests/e2e/screenshots/
