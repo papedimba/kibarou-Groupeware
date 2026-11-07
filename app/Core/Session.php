@@ -84,6 +84,44 @@ final class Session
         return $this->data['_flash_old'][$key] ?? $default;
     }
 
+    /**
+     * Garde une donnée sensible chiffrée en session, avec une durée de vie. La clé dérive du jeton
+     * du cookie, que la base ne stocke pas : une fuite de la table sessions ne permet pas de la lire.
+     * @param array<string,mixed> $value
+     */
+    public function seal(string $key, array $value, int $ttlSeconds): void
+    {
+        $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+        $this->set($key, [
+            'nonce' => base64_encode($nonce),
+            'box' => base64_encode(sodium_crypto_secretbox(json_encode($value, JSON_THROW_ON_ERROR), $nonce, $this->sealKey())),
+            'expires' => time() + $ttlSeconds,
+        ]);
+    }
+
+    /** @return array<string,mixed>|null null si absente, expirée ou illisible (elle est alors effacée) */
+    public function unseal(string $key): ?array
+    {
+        $item = $this->data[$key] ?? null;
+        if (!is_array($item) || (int) ($item['expires'] ?? 0) < time() || $this->token === null) {
+            if ($item !== null) {
+                $this->forget($key);
+            }
+            return null;
+        }
+        $plain = sodium_crypto_secretbox_open((string) base64_decode((string) $item['box']), (string) base64_decode((string) $item['nonce']), $this->sealKey());
+        $value = $plain === false ? null : json_decode($plain, true);
+        return is_array($value) ? $value : null;
+    }
+
+    private function sealKey(): string
+    {
+        if ($this->token === null) {
+            throw new \LogicException('Session sans jeton : impossible de chiffrer.');
+        }
+        return hash_hmac('sha256', 'kb-session-seal', $this->token, true);
+    }
+
     public function userId(): ?int
     {
         return $this->userId;

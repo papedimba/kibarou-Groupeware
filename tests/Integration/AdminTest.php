@@ -210,7 +210,7 @@ final class AdminTest extends IntegrationTestCase
         $this->assertStringContainsString('<td data-label="Par">Inconnu</td>', $body);
     }
 
-    public function testTempPasswordHandoverShownOnce(): void
+    public function testTempPasswordHandoverSurvivesRefreshUntilDone(): void
     {
         $this->createUser('admin3@kibarou.test', ['admin']);
         $this->login('admin3@kibarou.test', 'Motdepasse123');
@@ -218,13 +218,36 @@ final class AdminTest extends IntegrationTestCase
             'first_name' => 'Remise', 'last_name' => 'Compte', 'email' => 'remise@kibarou.test', 'temp_password' => 'Chantier2026xy',
             'roles' => [(string) $this->roleId('collaborateur')],
         ]);
-        $this->assertSame(200, $r->status);
-        $this->assertStringContainsString('remise@kibarou.test', $r->body);
-        $this->assertStringContainsString('Chantier2026xy', $r->body);
-        $this->assertStringContainsString('https://gw.test/login', $r->body);
-        $this->assertSame(0, (int) $this->app->db()->value('SELECT COUNT(*) FROM sessions WHERE data LIKE ?', ['%Chantier2026xy%']));
         $id = (int) $this->app->db()->value("SELECT id FROM users WHERE email = 'remise@kibarou.test'");
+        $this->assertRedirect($r, "/admin/users/$id/handover");
+        // Chiffré en session : jamais en clair dans la base.
+        $this->assertSame(0, (int) $this->app->db()->value('SELECT COUNT(*) FROM sessions WHERE data LIKE ?', ['%Chantier2026xy%']));
+        foreach ([1, 2] as $attempt) {
+            $body = $this->get("/admin/users/$id/handover")->body;
+            $this->assertStringContainsString('Chantier2026xy', $body, "affichage $attempt (actualisation)");
+            $this->assertStringContainsString('https://gw.test/login', $body);
+        }
+        $this->assertRedirect($this->post("/admin/users/$id/handover/done"), "/admin/users/$id");
+        $this->assertRedirect($this->get("/admin/users/$id/handover"), "/admin/users/$id");
         $this->assertStringNotContainsString('Chantier2026xy', $this->get("/admin/users/$id")->body);
+    }
+
+    public function testHandoverExpiresAndIsBoundToItsUser(): void
+    {
+        $this->createUser('admin6@kibarou.test', ['admin']);
+        $other = $this->createUser('autre@kibarou.test');
+        $this->login('admin6@kibarou.test', 'Motdepasse123');
+        $this->post('/admin/users', [
+            'first_name' => 'Expire', 'last_name' => 'Bientot', 'email' => 'expire@kibarou.test', 'temp_password' => 'Chantier2026zz',
+            'roles' => [(string) $this->roleId('collaborateur')],
+        ]);
+        $id = (int) $this->app->db()->value("SELECT id FROM users WHERE email = 'expire@kibarou.test'");
+        $this->assertRedirect($this->get("/admin/users/$other/handover"), "/admin/users/$other");
+        $sid = hash('sha256', $this->cookies['kb_session']);
+        $data = json_decode((string) $this->app->db()->value('SELECT data FROM sessions WHERE id = ?', [$sid]), true);
+        $data['handover']['expires'] = time() - 1;
+        $this->app->db()->update('sessions', ['data' => json_encode($data)], ['id' => $sid]);
+        $this->assertRedirect($this->get("/admin/users/$id/handover"), "/admin/users/$id");
     }
 
     public function testCreateFormDefaultsToCollaborateur(): void

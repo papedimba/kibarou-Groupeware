@@ -19,9 +19,11 @@ un rôle encore attribué non plus. Un utilisateur peut cumuler plusieurs rôles
 le responsable et au moins un rôle.
 - **Par défaut**, un email d'activation (valable 72 h) est mis en file : l'utilisateur choisit lui-même son mot de passe.
 - **Si l'email ne fonctionne pas encore**, cliquez sur « Générer » (ou saisissez un mot de passe temporaire).
-  Après l'enregistrement, un récapitulatif affiche une seule fois l'adresse de connexion, l'identifiant et le
-  mot de passe, avec « Copier » et « Imprimer ». Remettez-le de vive voix ou sur papier, jamais par messagerie :
-  il n'est stocké nulle part et ne pourra plus être affiché. L'utilisateur devra le changer à sa première connexion.
+  Après l'enregistrement, un récapitulatif affiche l'adresse de connexion, l'identifiant et le mot de passe, avec
+  « Copier » et « Imprimer ». Il résiste à une actualisation de la page, puis disparaît définitivement après
+  « Terminé » ou au bout de 10 minutes. Remettez-le de vive voix ou sur papier, jamais par messagerie.
+  L'utilisateur devra changer ce mot de passe à sa première connexion. Récapitulatif perdu : utilisez
+  « Lien de réinitialisation » sur la fiche.
 - Le rôle « Collaborateur » est coché par défaut.
 
 Statuts affichés : **Actif**, **Pas encore connecté** (compte créé, jamais utilisé), **Désactivé**.

@@ -49,6 +49,8 @@ return static function (Router $r): void {
                 $r->post('/admin/users/{id}', [UsersController::class, 'update']);
                 $r->post('/admin/users/{id}/status', [UsersController::class, 'toggleStatus']);
                 $r->post('/admin/users/{id}/reset-link', [UsersController::class, 'sendReset']);
+                $r->get('/admin/users/{id}/handover', [UsersController::class, 'handover']);
+                $r->post('/admin/users/{id}/handover/done', [UsersController::class, 'handoverDone']);
             });
             $r->post('/admin/users/{id}/sessions/revoke', [UsersController::class, 'revokeSessions'], ['perm:sessions.manage']);
 

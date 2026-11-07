@@ -14,6 +14,8 @@ use App\Modules\Roles\RoleService;
 
 final class UsersController extends Controller
 {
+    private const HANDOVER_TTL = 600;
+
     public function index(Request $request): Response
     {
         $filters = [
@@ -43,15 +45,33 @@ final class UsersController extends Controller
         }
         $temp = (string) $request->input('temp_password', '');
         if ($temp !== '') {
-            // Récapitulatif affiché une seule fois, jamais stocké (ni session, ni flash).
-            return $this->view('admin/users/handover', [
-                'currentPath' => '/admin/users',
-                'target' => $this->repo()->find($id),
-                'tempPassword' => $temp,
-                'loginUrl' => rtrim((string) $this->app->config('app.url'), '/') . '/login',
-            ]);
+            // Chiffré en session 10 minutes : survit à une actualisation, effacé par « Terminé ».
+            $this->app->session()->seal('handover', ['user_id' => $id, 'password' => $temp], self::HANDOVER_TTL);
+            return $this->redirect("/admin/users/$id/handover");
         }
         return $this->redirect('/admin/users/' . $id, 'Compte créé. Un lien d\'activation a été mis en file d\'envoi par email.');
+    }
+
+    public function handover(Request $request): Response
+    {
+        $id = $this->id($request);
+        $data = $this->app->session()->unseal('handover');
+        if ($data === null || (int) $data['user_id'] !== $id) {
+            return $this->redirect("/admin/users/$id", 'Le récapitulatif n\'est plus disponible. Si besoin, envoyez un « Lien de réinitialisation ».', 'danger');
+        }
+        return $this->view('admin/users/handover', [
+            'currentPath' => '/admin/users',
+            'target' => $this->repo()->find($id) ?? throw new HttpException(404),
+            'tempPassword' => (string) $data['password'],
+            'loginUrl' => rtrim((string) $this->app->config('app.url'), '/') . '/login',
+            'ttlMinutes' => intdiv(self::HANDOVER_TTL, 60),
+        ]);
+    }
+
+    public function handoverDone(Request $request): Response
+    {
+        $this->app->session()->forget('handover');
+        return $this->redirect('/admin/users/' . $this->id($request), 'Récapitulatif fermé.');
     }
 
     public function show(Request $request): Response
