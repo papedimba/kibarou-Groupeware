@@ -105,6 +105,17 @@ final class UserRepository
         );
     }
 
+    /** @return list<array<string,mixed>> administrateurs actifs à contacter (nom, email, téléphone) */
+    public function adminContacts(): array
+    {
+        return $this->db->fetchAll(
+            "SELECT DISTINCT u.first_name, u.last_name, u.email, u.phone FROM users u
+             JOIN user_roles ur ON ur.user_id = u.id JOIN roles r ON r.id = ur.role_id
+             WHERE r.slug IN ('admin', 'super_admin') AND u.status = 'active' AND u.deleted_at IS NULL
+             ORDER BY u.last_name, u.first_name LIMIT 5",
+        );
+    }
+
     /** @return list<array{id:int,name:string}> utilisateurs actifs pour les listes de sélection */
     public function options(): array
     {

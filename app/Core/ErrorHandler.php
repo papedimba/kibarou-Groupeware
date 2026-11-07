@@ -52,10 +52,32 @@ final class ErrorHandler
     private function page(int $status, string $message): Response
     {
         try {
-            $body = $this->app->view()->render('errors/error', ['status' => $status, 'message' => $message]);
+            $body = $this->inApp($status, $message) ?? $this->app->view()->render('errors/error', ['status' => $status, 'message' => $message]);
         } catch (Throwable) {
             $body = '<!doctype html><meta charset="utf-8"><title>Erreur</title><p>' . e($message) . '</p>';
         }
         return new Response($body, $status);
+    }
+
+    /** Utilisateur connecté et erreur 403/404 : la page reste dans l'interface, avec qui contacter. */
+    private function inApp(int $status, string $message): ?string
+    {
+        if (!in_array($status, [403, 404], true)) {
+            return null;
+        }
+        $user = $this->app->auth()->user();
+        if ($user === null) {
+            return null;
+        }
+        $view = $this->app->view();
+        $view->share('currentUser', $user);
+        $view->share('currentPath', '');
+        $view->share('flash', null);
+        $view->share('errors', []);
+        return $view->render('errors/app_error', [
+            'status' => $status,
+            'message' => $message,
+            'contacts' => $status === 403 ? (new \App\Modules\Users\UserRepository($this->app->db()))->adminContacts() : [],
+        ]);
     }
 }

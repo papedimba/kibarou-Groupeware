@@ -14,9 +14,6 @@ $nav = static function (string $path, string $icon, string $label) use ($current
     return '<a href="' . e(url($path)) . '" class="' . ($active ? 'active' : '') . '"' . ($active ? ' aria-current="page"' : '') . '>'
         . '<i data-lucide="' . e($icon) . '" aria-hidden="true"></i>' . e($label) . '</a>';
 };
-$soon = static fn (string $icon, string $label): string =>
-    '<a href="#" class="disabled" aria-disabled="true" tabindex="-1"><i data-lucide="' . e($icon) . '" aria-hidden="true"></i>'
-    . e($label) . '<span class="soon">bientôt</span></a>';
 ?>
 <!doctype html>
 <html lang="fr">
@@ -37,16 +34,8 @@ $soon = static fn (string $icon, string $label): string =>
             <span>Kibarou<small>Groupware</small></span>
         </a>
         <nav class="kb-nav">
-            <?= $nav('/', 'layout-dashboard', 'Tableau de bord') ?>
-            <div class="kb-nav-title">Collaboration</div>
-            <?= $soon('message-square', 'Messagerie') ?>
-            <?= $soon('calendar', 'Calendrier') ?>
-            <?= $soon('check-square', 'Tâches') ?>
-            <?= $soon('folder-kanban', 'Projets') ?>
-            <?= $soon('file-text', 'Documents') ?>
-            <?= $soon('megaphone', 'Annonces') ?>
-            <?= $soon('git-pull-request', 'Demandes') ?>
-            <?= $soon('contact', 'Annuaire') ?>
+            <?= $nav('/', 'house', 'Accueil') ?>
+            <?= $nav('/profile', 'user', 'Mon profil') ?>
             <?php if (can('admin.access')): ?>
                 <div class="kb-nav-title">Administration</div>
                 <?= $nav('/admin', 'shield', 'Vue d\'ensemble') ?>

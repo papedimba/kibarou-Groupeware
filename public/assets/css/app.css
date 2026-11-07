@@ -152,3 +152,5 @@ body { font-size: .9375rem; }
     .kb-content { padding: 0; }
     .card { border: 0; box-shadow: none; }
 }
+.kb-contacts li { display: flex; flex-wrap: wrap; column-gap: .75rem; padding: .35rem 0; }
+.kb-alert-list li { padding: .2rem 0; }
