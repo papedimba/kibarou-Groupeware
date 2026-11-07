@@ -34,20 +34,20 @@ $this->layout('layouts/app', ['title' => 'Utilisateurs', 'breadcrumbs' => [['Adm
 </form>
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
+        <table class="table table-hover mb-0 align-middle kb-table-stack">
             <thead><tr><th>Nom</th><th>Service</th><th>Fonction</th><th>Rôles</th><th>Statut</th><th>Dernière connexion</th></tr></thead>
             <tbody>
             <?php foreach ($users->items as $u): ?>
                 <tr>
-                    <td>
+                    <td class="kb-cell-title">
                         <a class="fw-medium text-decoration-none" href="<?= e(url('/admin/users/' . $u['id'])) ?>"><?= e($u['last_name'] . ' ' . $u['first_name']) ?></a>
                         <div class="small text-secondary"><?= e($u['email']) ?></div>
                     </td>
-                    <td><?= e($u['department_name'] ?? '—') ?></td>
-                    <td><?= e($u['position_title'] ?? '—') ?></td>
-                    <td class="small"><?= e($u['role_names'] ?? '—') ?></td>
-                    <td><?= $u['status'] === 'active' ? '<span class="badge text-bg-success">Actif</span>' : '<span class="badge text-bg-secondary">Désactivé</span>' ?></td>
-                    <td class="small"><?= e(format_date($u['last_login_at'])) ?></td>
+                    <td data-label="Service"><?= e($u['department_name'] ?? '—') ?></td>
+                    <td data-label="Fonction"><?= e($u['position_title'] ?? '—') ?></td>
+                    <td data-label="Rôles" class="small"><?= e($u['role_names'] ?? '—') ?></td>
+                    <td data-label="Statut"><?= $u['status'] === 'active' ? '<span class="badge text-bg-success">Actif</span>' : '<span class="badge text-bg-secondary">Désactivé</span>' ?></td>
+                    <td data-label="Dernière connexion" class="small"><?= e(format_date($u['last_login_at'])) ?></td>
                 </tr>
             <?php endforeach; ?>
             <?php if ($users->items === []): ?><tr><td colspan="6" class="text-center text-secondary py-4">Aucun utilisateur trouvé.</td></tr><?php endif; ?>

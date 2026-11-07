@@ -112,3 +112,17 @@ body { font-size: .9375rem; }
     .kb-header .breadcrumb { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* Tableaux en cartes empilées sur téléphone : chaque cellule affiche son libellé (data-label). */
+@media (max-width: 767.98px) {
+    .kb-table-stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .kb-table-stack, .kb-table-stack tbody, .kb-table-stack tr, .kb-table-stack td { display: block; width: 100%; }
+    .kb-table-stack tr { padding: .75rem 1rem; border-bottom: 1px solid var(--kb-gray-200); }
+    .kb-table-stack > :not(caption) > * > * { padding: .2rem 0; border: 0; background: transparent; box-shadow: none; }
+    .kb-table-stack td[data-label] { display: flex; gap: .75rem; justify-content: space-between; text-align: right; }
+    .kb-table-stack td[data-label]::before { content: attr(data-label); color: var(--kb-gray-500); text-align: left; flex-shrink: 0; }
+    .kb-table-stack td.kb-cell-title { font-weight: 600; padding-bottom: .35rem; }
+    .kb-table-stack td.kb-cell-action { text-align: left; padding-top: .5rem; }
+    .kb-table-stack td[colspan] { text-align: center; }
+    .kb-table-stack td.small { font-size: inherit; }
+}

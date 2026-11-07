@@ -33,15 +33,15 @@ $this->layout('layouts/app', ['title' => 'Mon profil', 'breadcrumbs' => [['Mon p
         <div class="card">
             <div class="card-header">Sessions ouvertes</div>
             <div class="table-responsive">
-                <table class="table mb-0 align-middle">
+                <table class="table mb-0 align-middle kb-table-stack">
                     <thead><tr><th>Appareil</th><th>Adresse IP</th><th>Dernière activité</th><th></th></tr></thead>
                     <tbody>
                     <?php foreach ($sessions as $s): ?>
                         <tr>
-                            <td class="small text-truncate" title="<?= e($s['user_agent']) ?>"><?= e(mb_strimwidth((string) $s['user_agent'], 0, 50, '…')) ?></td>
-                            <td><?= e($s['ip_address']) ?></td>
-                            <td><?= e(format_date($s['last_activity_at'])) ?></td>
-                            <td class="text-end">
+                            <td class="kb-cell-title" title="<?= e($s['user_agent']) ?>"><?= e(device_label((string) $s['user_agent'])) ?></td>
+                            <td data-label="Adresse IP"><?= e($s['ip_address']) ?></td>
+                            <td data-label="Dernière activité"><?= e(format_date($s['last_activity_at'])) ?></td>
+                            <td class="text-end kb-cell-action">
                                 <?php if ($s['id'] === $currentSessionId): ?>
                                     <span class="badge text-bg-primary">Cette session</span>
                                 <?php else: ?>

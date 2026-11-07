@@ -65,7 +65,7 @@ $id = (int) $target['id'];
                 </div>
                 <ul class="list-group list-group-flush">
                     <?php foreach ($sessions as $s): ?>
-                        <li class="list-group-item small"><?= e($s['ip_address']) ?> · <?= e(format_date($s['last_activity_at'])) ?> · <span class="text-secondary"><?= e(mb_strimwidth((string) $s['user_agent'], 0, 60, '…')) ?></span></li>
+                        <li class="list-group-item small"><span class="fw-medium"><?= e(device_label((string) $s['user_agent'])) ?></span> · <?= e($s['ip_address']) ?> · <?= e(format_date($s['last_activity_at'])) ?></li>
                     <?php endforeach; ?>
                     <?php if ($sessions === []): ?><li class="list-group-item small text-secondary">Aucune session ouverte.</li><?php endif; ?>
                 </ul>

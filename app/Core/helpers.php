@@ -61,6 +61,30 @@ function initials(string $first, string $last): string
     return mb_strtoupper(mb_substr($first, 0, 1) . mb_substr($last, 0, 1));
 }
 
+/** Résumé lisible d'un user-agent : « iPhone · Safari ». */
+function device_label(string $ua): string
+{
+    $os = match (true) {
+        str_contains($ua, 'iPhone') => 'iPhone',
+        str_contains($ua, 'iPad') => 'iPad',
+        str_contains($ua, 'Android') => 'Android',
+        str_contains($ua, 'Windows') => 'Windows',
+        str_contains($ua, 'Mac OS X') => 'Mac',
+        str_contains($ua, 'Linux') => 'Linux',
+        default => null,
+    };
+    // Edge et Chrome contiennent aussi « Safari » : l'ordre compte.
+    $browser = match (true) {
+        str_contains($ua, 'Edg/') => 'Edge',
+        str_contains($ua, 'Firefox/') => 'Firefox',
+        str_contains($ua, 'Chrome/') => 'Chrome',
+        str_contains($ua, 'Safari/') => 'Safari',
+        default => null,
+    };
+    $parts = array_filter([$os, $browser]);
+    return $parts === [] ? 'Appareil inconnu' : implode(' · ', $parts);
+}
+
 /** Date courante UTC au format SQL. */
 function now_utc(): string
 {

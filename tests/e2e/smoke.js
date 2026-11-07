@@ -7,7 +7,7 @@ const assert = require('assert');
 (async () => {
   const base = process.env.KB_URL || 'http://127.0.0.1:8080';
   const browser = await chromium.launch();
-  const page = await (await browser.newContext()).newPage();
+  const page = await (await browser.newContext({ viewport: { width: 1366, height: 820 } })).newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error') problems.push(m.text()); });
   page.on('pageerror', e => problems.push(e.message));
@@ -27,9 +27,26 @@ const assert = require('assert');
     const r = await page.goto(base + path);
     assert.strictEqual(r.status(), 200, path);
   }
+  // Tâche 1 : rien de coupé à droite sur ordinateur (sessions du profil)
+  await page.goto(base + '/profile');
+  const sessionAction = page.locator('table .badge, table button').first();
+  const sb = await sessionAction.boundingBox();
+  assert.ok(sb && sb.x + sb.width <= 1366, `action de session visible à 1366 px (${sb && sb.x + sb.width})`);
+
   const mobile = await (await browser.newContext({ ...devices['iPhone 13'] })).newPage();
+  mobile.on('console', m => { if (m.type() === 'error') problems.push(m.text()); });
   await mobile.goto(base + '/login');
   assert.ok(await mobile.locator('#email').isVisible(), 'formulaire visible sur mobile');
+  await mobile.fill('#email', process.env.KB_EMAIL);
+  await mobile.fill('#password', process.env.KB_PASSWORD);
+  await mobile.click('button[type=submit]');
+  await mobile.waitForURL(base + '/');
+  const vw = mobile.viewportSize().width;
+  // Tâche 1 : le statut des utilisateurs reste visible sur téléphone
+  await mobile.goto(base + '/admin/users');
+  const status = mobile.locator('tbody .badge').first();
+  const st = await status.boundingBox();
+  assert.ok(st && st.x >= 0 && st.x + st.width <= vw, `statut visible sur mobile (${st && st.x + st.width} > ${vw})`);
 
   assert.deepStrictEqual(problems, [], 'aucune erreur console (CSP incluse)');
   await browser.close();

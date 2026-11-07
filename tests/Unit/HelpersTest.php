@@ -17,4 +17,13 @@ final class HelpersTest extends TestCase
     {
         $this->assertSame('ÉK', initials('élodie', 'koné'));
     }
+
+    public function testDeviceLabel(): void
+    {
+        $this->assertSame('iPhone · Safari', device_label('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'));
+        $this->assertSame('Android · Chrome', device_label('Mozilla/5.0 (Linux; Android 14; SM-A546B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36'));
+        $this->assertSame('Windows · Edge', device_label('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0'));
+        $this->assertSame('Linux · Firefox', device_label('Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0'));
+        $this->assertSame('Appareil inconnu', device_label(''));
+    }
 }
