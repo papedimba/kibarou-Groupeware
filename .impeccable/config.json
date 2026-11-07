@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-11-07T10:56:41.054Z",
+        "reason": "User requirement: brief section 8 (Interface utilisateur) explicitly mandates 'Typographie Inter'"
+      }
+    ]
+  }
+}
