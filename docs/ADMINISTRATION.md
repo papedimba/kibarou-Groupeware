@@ -18,8 +18,13 @@ un rôle encore attribué non plus. Un utilisateur peut cumuler plusieurs rôles
 **Administration › Utilisateurs › Nouvel utilisateur**, puis renseignez l'identité, le service, la fonction,
 le responsable et au moins un rôle.
 - **Par défaut**, un email d'activation (valable 72 h) est mis en file : l'utilisateur choisit lui-même son mot de passe.
-- **Si l'email ne fonctionne pas encore**, saisissez un mot de passe temporaire : l'utilisateur devra le changer
-  à sa première connexion. Transmettez-le de vive voix, jamais par messagerie.
+- **Si l'email ne fonctionne pas encore**, cliquez sur « Générer » (ou saisissez un mot de passe temporaire).
+  Après l'enregistrement, un récapitulatif affiche une seule fois l'adresse de connexion, l'identifiant et le
+  mot de passe, avec « Copier » et « Imprimer ». Remettez-le de vive voix ou sur papier, jamais par messagerie :
+  il n'est stocké nulle part et ne pourra plus être affiché. L'utilisateur devra le changer à sa première connexion.
+- Le rôle « Collaborateur » est coché par défaut.
+
+Statuts affichés : **Actif**, **Pas encore connecté** (compte créé, jamais utilisé), **Désactivé**.
 
 ## Départ ou suspension d'un collaborateur
 Ouvrez sa fiche puis **Désactiver** : il ne peut plus se connecter et toutes ses sessions sont fermées immédiatement.
@@ -39,6 +44,6 @@ L'administrateur (permission `sessions.manage`) peut tout fermer depuis la fiche
 d'un utilisateur ferme ses sessions, pour que ses nouveaux droits s'appliquent tout de suite.
 
 ## Surveillance
-**Administration › Vue d'ensemble** : utilisateurs actifs, connectés, échecs de connexion sur 24 h, emails en échec,
-et une alerte si la tâche CRON ne s'exécute plus. **Journal d'audit** : toutes les actions sensibles, filtrables par
-préfixe (`auth.`, `user.`, `role.`…).
+L'**Accueil** d'un administrateur affiche des raccourcis et trois alertes : comptes pas encore connectés, échecs de connexion sur 24 h, emails en échec. **Administration › Vue d'ensemble** : utilisateurs actifs, connectés, échecs de connexion sur 24 h, emails en échec,
+et une alerte si la tâche CRON ne s'exécute plus. **Journal d'audit** : toutes les actions sensibles, en français, filtrables par type d'action.
+Une tentative de connexion refusée apparaît « Par : Inconnu » : le nom affiché dans « Concerne » est le compte visé, pas l'auteur.

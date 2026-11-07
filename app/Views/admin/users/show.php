@@ -71,8 +71,10 @@ $id = (int) $target['id'];
                 </ul>
             </div>
         <?php endif; ?>
-        <?php if ($audit !== []): ?>
-            <div class="card"><div class="card-header">Historique</div><?= $this->partial('admin/_audit_table', ['rows' => $audit]) ?></div>
-        <?php endif; ?>
     </div>
+    <?php if ($audit !== []): ?>
+        <div class="col-12">
+            <div class="card"><div class="card-header">Historique</div><?= $this->partial('admin/_audit_table', ['rows' => $audit]) ?></div>
+        </div>
+    <?php endif; ?>
 </div>

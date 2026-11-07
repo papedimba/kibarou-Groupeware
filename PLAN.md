@@ -69,3 +69,11 @@ Ordre justifié : l'annuaire et les notifications sont des dépendances de la me
   - La suppression définitive et l'anonymisation des comptes ne sont pas implémentées : un compte se désactive
     (la colonne `deleted_at` est prévue pour l'anonymisation RGPD d'un lot ultérieur).
   - Pas de double authentification (2FA) : recommandée pour les super administrateurs dans le lot 10.
+
+### Corrections UX du lot 1 — 07/11/2026
+- Revue Impeccable (critique en deux évaluations indépendantes) : 23/40, 1 P0 et 4 P1. Plan : `docs/superpowers/plans/2026-11-07-corrections-ux-lot1.md`.
+- Corrigé : tableaux en cartes sur mobile ; cibles tactiles ≥ 44 px, texte 16 px sur mobile, contrastes AA ; journal d'audit en français ;
+  création de compte sûre (récapitulatif unique, statut réel, confirmations nommées, anti double envoi, « Afficher » le mot de passe) ;
+  accueil utile et erreurs 403/404 dans l'interface ; finition (surfaces navigateur, contrastes résiduels).
+- Détecteur Impeccable sur le HTML rendu : 84 signalements → 1 avis volontaire (tirets « — » des cellules vides).
+- Tests : 68 PHPUnit, test de fumée Playwright étendu (cibles tactiles, contrastes, statut visible sur mobile, confirmation, double envoi).
