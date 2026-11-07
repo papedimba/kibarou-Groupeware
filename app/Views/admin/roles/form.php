@@ -38,10 +38,10 @@ $moduleNames = ['admin' => 'Administration', 'users' => 'Utilisateurs', 'organiz
                 <fieldset class="mb-3">
                     <legend class="h6 text-secondary text-uppercase small"><?= e($moduleNames[$module] ?? $module) ?></legend>
                     <?php foreach ($perms as $p): ?>
-                        <div class="form-check">
+                        <label class="kb-check-row" for="perm<?= (int) $p['id'] ?>">
                             <input class="form-check-input" type="checkbox" name="permissions[]" value="<?= (int) $p['id'] ?>" id="perm<?= (int) $p['id'] ?>"<?= in_array((int) $p['id'], $checked, true) ? ' checked' : '' ?>>
-                            <label class="form-check-label" for="perm<?= (int) $p['id'] ?>"><?= e($p['description']) ?> <code class="small">(<?= e($p['slug']) ?>)</code></label>
-                        </div>
+                            <span><?= e($p['description']) ?> <code class="small">(<?= e($p['slug']) ?>)</code></span>
+                        </label>
                     <?php endforeach; ?>
                 </fieldset>
             <?php endforeach; ?>

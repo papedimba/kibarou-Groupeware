@@ -24,7 +24,7 @@
     --kb-orange: #f97316;
     --kb-gray-50: #f5f7fb;
     --kb-gray-200: #e3e8f0;
-    --kb-gray-500: #64748b;
+    --kb-gray-500: #556275;
     --kb-text: #1e293b;
     --kb-sidebar-w: 248px;
     --bs-body-font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -35,7 +35,14 @@
     --bs-link-color: var(--kb-blue);
     --bs-link-color-rgb: 37, 99, 235;
     --bs-border-color: var(--kb-gray-200);
+    --bs-secondary-color: var(--kb-gray-500);
 }
+.text-secondary { color: var(--kb-gray-500) !important; }
+.btn-outline-primary { --bs-btn-color: var(--kb-blue); --bs-btn-border-color: var(--kb-blue); --bs-btn-hover-bg: var(--kb-blue); --bs-btn-hover-border-color: var(--kb-blue); --bs-btn-active-bg: #1d4ed8; }
+.btn-outline-danger { --bs-btn-color: #b42332; --bs-btn-border-color: #b42332; --bs-btn-hover-bg: #b42332; --bs-btn-hover-border-color: #b42332; }
+.kb-check-row { display: flex; align-items: flex-start; gap: .65rem; padding: .55rem .25rem; border-radius: 8px; cursor: pointer; }
+.kb-check-row:hover { background: var(--kb-gray-50); }
+.kb-check-row .form-check-input { margin: .15rem 0 0; flex-shrink: 0; }
 
 body { font-size: .9375rem; }
 .btn-primary { --bs-btn-bg: var(--kb-blue); --bs-btn-border-color: var(--kb-blue); --bs-btn-hover-bg: #1d4ed8; --bs-btn-hover-border-color: #1d4ed8; --bs-btn-active-bg: #1e40af; }
@@ -58,7 +65,7 @@ body { font-size: .9375rem; }
 .kb-brand-mark { width: 34px; height: 34px; border-radius: 8px; background: var(--kb-blue); display: grid; place-items: center; font-weight: 800; color: #fff; }
 .kb-brand small { display: block; font-weight: 500; font-size: .72rem; color: #94a3b8; }
 .kb-nav { padding: .5rem .75rem 1rem; }
-.kb-nav-title { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: #64748b; padding: 1rem .75rem .35rem; }
+.kb-nav-title { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; padding: 1rem .75rem .35rem; }
 .kb-nav a {
     display: flex; align-items: center; gap: .7rem; padding: .55rem .75rem; border-radius: 8px;
     color: #cbd5e1; text-decoration: none; font-weight: 500;
@@ -76,7 +83,7 @@ body { font-size: .9375rem; }
 .kb-header .breadcrumb { margin: 0; font-size: .85rem; }
 .kb-avatar {
     width: 34px; height: 34px; border-radius: 50%; background: var(--kb-blue-soft); color: var(--kb-blue);
-    display: inline-grid; place-items: center; font-weight: 700; font-size: .8rem;
+    display: inline-grid; place-items: center; font-weight: 700; font-size: .8rem; color: #1d4ed8;
 }
 .kb-content { padding: 1.5rem; max-width: 1400px; width: 100%; }
 .kb-page-title { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: 1.25rem; }
@@ -100,13 +107,22 @@ body { font-size: .9375rem; }
 .kb-auth { min-height: 100vh; display: grid; place-items: center; padding: 1.5rem; background: linear-gradient(160deg, var(--kb-night) 0%, var(--kb-night-2) 55%, #1e3a8a 100%); }
 .kb-auth-card { width: 100%; max-width: 420px; background: #fff; border-radius: 16px; padding: 2rem; box-shadow: 0 20px 50px rgba(0, 0, 0, .25); }
 .kb-auth-card .kb-brand { color: var(--kb-night); padding: 0 0 1.5rem; }
+.kb-auth-card .kb-brand small { color: var(--kb-gray-500); }
 
 /* Mobile : barre latérale en tiroir */
 .kb-menu-btn { display: none; }
+.kb-header-title { display: none; font-weight: 600; margin: 0; font-size: 1rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 991.98px) {
     .kb-sidebar { position: fixed; left: 0; z-index: 1050; transform: translateX(-100%); transition: transform .2s ease; }
     .kb-sidebar.open { transform: none; box-shadow: 0 0 40px rgba(0,0,0,.4); }
-    .kb-menu-btn { display: inline-flex; }
+    .kb-menu-btn { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; }
+    .kb-header-title { display: block; }
+    body { font-size: 1rem; }
+    .btn, .form-control, .form-select { min-height: 44px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; }
+    .form-check-input { width: 1.25rem; height: 1.25rem; }
+    .kb-check-row { min-height: 44px; }
+    .kb-header .dropdown > .btn { min-height: 44px; }
     .kb-content { padding: 1rem; }
     .kb-header { padding: 0 1rem; }
     .kb-header .breadcrumb { display: none; }

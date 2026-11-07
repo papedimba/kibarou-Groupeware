@@ -60,14 +60,14 @@ $select = static function (string $name, string $label, array $options, string $
             <div class="card"><div class="card-header">Rôles *</div><div class="card-body">
                 <?php foreach ($roles as $r): ?>
                     <?php $locked = $r['slug'] === 'super_admin' && !$actorIsSuper; ?>
-                    <div class="form-check mb-2">
+                    <label class="kb-check-row" for="role<?= (int) $r['id'] ?>">
                         <input class="form-check-input" type="checkbox" name="roles[]" value="<?= (int) $r['id'] ?>" id="role<?= (int) $r['id'] ?>"
                             <?= in_array((int) $r['id'], $selectedRoles, true) ? ' checked' : '' ?><?= $locked ? ' disabled' : '' ?>>
-                        <label class="form-check-label" for="role<?= (int) $r['id'] ?>">
+                        <span>
                             <?= e($r['name']) ?>
                             <?php if ($r['description']): ?><span class="d-block small text-secondary"><?= e($r['description']) ?></span><?php endif; ?>
-                        </label>
-                    </div>
+                        </span>
+                    </label>
                 <?php endforeach; ?>
                 <?= field_error($errors, 'roles') ?>
             </div></div>

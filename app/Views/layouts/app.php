@@ -66,6 +66,7 @@ $soon = static fn (string $icon, string $label): string =>
             <button type="button" class="btn btn-light kb-menu-btn" data-kb-toggle="sidebar" aria-controls="kb-sidebar" aria-expanded="false" aria-label="Ouvrir le menu">
                 <i data-lucide="menu" aria-hidden="true"></i>
             </button>
+            <p class="kb-header-title" aria-hidden="true"><?= e($title) ?></p>
             <nav aria-label="Fil d'Ariane">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="<?= e(url('/')) ?>">Accueil</a></li>
