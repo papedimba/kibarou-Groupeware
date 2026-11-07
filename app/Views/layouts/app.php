@@ -110,7 +110,7 @@ $nav = static function (string $path, string $icon, string $label) use ($current
             <div class="modal-header"><h2 class="modal-title h5" id="kb-confirm-title">Confirmation</h2></div>
             <div class="modal-body"><p class="mb-0" data-kb-confirm-text></p></div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
                 <button type="button" class="btn btn-primary" data-kb-confirm-ok>Confirmer</button>
             </div>
         </div>

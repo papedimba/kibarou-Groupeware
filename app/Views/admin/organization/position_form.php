@@ -24,6 +24,6 @@ $val = static fn (string $k, mixed $default = '') => $old[$k] ?? ($position[$k] 
             <label class="form-check-label" for="is_active">Fonction active</label>
         </div>
         <button class="btn btn-primary" type="submit">Enregistrer</button>
-        <a class="btn btn-light" href="<?= e(url('/admin/positions')) ?>">Annuler</a>
+        <a class="btn btn-outline-secondary" href="<?= e(url('/admin/positions')) ?>">Annuler</a>
     </form>
 </div></div>

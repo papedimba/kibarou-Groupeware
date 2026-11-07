@@ -78,7 +78,7 @@ $select = static function (string $name, string $label, array $options, string $
             </div></div>
             <div class="d-grid gap-2 mt-4">
                 <button class="btn btn-primary" type="submit"><i data-lucide="save" aria-hidden="true"></i> Enregistrer</button>
-                <a class="btn btn-light" href="<?= e(url($isNew ? '/admin/users' : '/admin/users/' . $target['id'])) ?>">Annuler</a>
+                <a class="btn btn-outline-secondary" href="<?= e(url($isNew ? '/admin/users' : '/admin/users/' . $target['id'])) ?>">Annuler</a>
             </div>
         </div>
     </div>

@@ -48,7 +48,7 @@ $val = static fn (string $k, mixed $default = '') => $old[$k] ?? ($dept[$k] ?? $
         </div>
         <div class="col-12 d-flex gap-2">
             <button class="btn btn-primary" type="submit">Enregistrer</button>
-            <a class="btn btn-light" href="<?= e(url('/admin/departments')) ?>">Annuler</a>
+            <a class="btn btn-outline-secondary" href="<?= e(url('/admin/departments')) ?>">Annuler</a>
         </div>
     </form>
 </div></div>

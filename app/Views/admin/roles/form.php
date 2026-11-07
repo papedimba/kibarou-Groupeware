@@ -30,7 +30,7 @@ $moduleNames = ['admin' => 'Administration', 'users' => 'Utilisateurs', 'organiz
                 <?= field_error($errors, 'description') ?>
             </div>
             <button class="btn btn-primary" type="submit">Enregistrer</button>
-            <a class="btn btn-light" href="<?= e(url('/admin/roles')) ?>">Annuler</a>
+            <a class="btn btn-outline-secondary" href="<?= e(url('/admin/roles')) ?>">Annuler</a>
         </div></div></div>
         <div class="col-lg-7"><div class="card"><div class="card-header">Permissions</div><div class="card-body">
             <?= field_error($errors, 'permissions') ?>

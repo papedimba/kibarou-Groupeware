@@ -28,6 +28,23 @@ async function minContrast(p, selector) {
   }, selector);
 }
 
+// Contraste non textuel (WCAG 1.4.11) : bordure d'un contrôle contre le fond de son conteneur.
+async function minBorderContrast(p, selector) {
+  return p.evaluate(sel => {
+    const rgb = c => (c.match(/[\d.]+/g) || []).map(Number);
+    const lum = ([r, g, b]) => [r, g, b].map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; })
+      .reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
+    let worst = 21;
+    for (const el of document.querySelectorAll(sel)) {
+      if (!el.getClientRects().length) continue;
+      let bg = el.parentElement; while (bg && (rgb(getComputedStyle(bg).backgroundColor)[3] === 0 || getComputedStyle(bg).backgroundColor === 'transparent')) bg = bg.parentElement;
+      const l1 = lum(rgb(getComputedStyle(el).borderTopColor)), l2 = lum(rgb(bg ? getComputedStyle(bg).backgroundColor : 'rgb(255,255,255)'));
+      worst = Math.min(worst, (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05));
+    }
+    return worst;
+  }, selector);
+}
+
 (async () => {
   const base = process.env.KB_URL || 'http://127.0.0.1:8080';
   const browser = await chromium.launch();
@@ -78,6 +95,9 @@ async function minContrast(p, selector) {
     await mobile.goto(base + path);
     assert.deepStrictEqual(await smallTargets(mobile), [], `cibles >= 44 px sur ${path}`);
   }
+  await mobile.goto(base + '/admin/users/create');
+  const borders = await minBorderContrast(mobile, '.form-control, .form-select, .form-check-input');
+  assert.ok(borders >= 3, `bordures des champs et cases >= 3:1 (${borders.toFixed(2)})`);
   assert.ok(await minContrast(mobile, '.kb-nav-title') >= 4.5, 'contraste des titres du menu');
   assert.ok(await minContrast(mobile, '.text-secondary') >= 4.5, 'contraste du texte secondaire');
   await mobile.goto(base + '/admin/audit?action=auth.login_failed');
