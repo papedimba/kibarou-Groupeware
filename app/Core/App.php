@@ -135,11 +135,12 @@ final class App
         $this->resetRequestState();
         try {
             $this->audit()->setIp($request->ip());
-            $route = $router->match($request->method, $request->path);
+            // Session démarrée avant le routage, pour qu'une URL inconnue s'affiche dans l'interface.
             // L'installateur tourne avant que la table des sessions n'existe.
-            if (!in_array('install', $route['middleware'], true)) {
+            if ($request->path !== '/install') {
                 $this->session()->start($request);
             }
+            $route = $router->match($request->method, $request->path);
             $request->params = $route['params'];
             $response = (new Middleware($this))->run($route['middleware'], $request, function (Request $req) use ($route) {
                 [$class, $method] = $route['handler'];

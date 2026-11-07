@@ -37,7 +37,9 @@
     var pendingForm = null;
     document.querySelectorAll('form[data-confirm]').forEach(function (form) {
         form.addEventListener('submit', function (event) {
-            if (form.dataset.confirmed === '1' || !confirmEl || !window.bootstrap) { return; }
+            // La confirmation ne vaut que pour un envoi (sinon un retour arrière la réutiliserait).
+            if (form.dataset.confirmed === '1') { delete form.dataset.confirmed; return; }
+            if (!confirmEl || !window.bootstrap) { return; }
             event.preventDefault();
             event.stopImmediatePropagation();
             pendingForm = form;

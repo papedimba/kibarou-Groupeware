@@ -61,4 +61,13 @@ final class DashboardTest extends IntegrationTestCase
         $this->assertStringContainsString('Nouvel utilisateur', $body);
         $this->assertStringContainsString('Journal d\'audit', $body);
     }
+
+    public function testUnknownRouteStaysInsideAppWhenLoggedIn(): void
+    {
+        $this->createUser('collab@kibarou.test');
+        $this->login('collab@kibarou.test', 'Motdepasse123');
+        $r = $this->get('/nexiste-pas');
+        $this->assertSame(404, $r->status);
+        $this->assertStringContainsString('class="kb-sidebar"', $r->body);
+    }
 }

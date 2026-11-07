@@ -36,7 +36,15 @@ final class AuditLabels
 
     private const ALERTS = ['auth.login_failed', 'auth.login_disabled', 'auth.throttled', 'user.disabled', 'user.sessions_revoked'];
 
-    private const DETAIL_KEYS = ['email' => 'Email', 'count' => 'Nombre', 'changes' => 'Champs modifiés', 'name' => 'Nom', 'slug' => 'Identifiant'];
+    private const DETAIL_KEYS = ['email' => 'Email', 'count' => 'Nombre', 'changes' => 'Champs modifiés', 'name' => 'Nom'];
+
+    private const FIELDS = ['email' => 'Email', 'first_name' => 'Prénom', 'last_name' => 'Nom', 'phone' => 'Téléphone',
+        'department_id' => 'Service', 'position_id' => 'Fonction', 'manager_id' => 'Responsable'];
+
+    /** Pour ces actions, user_id désigne le compte visé, pas l'auteur. */
+    private const ANONYMOUS = ['auth.login_failed', 'auth.login_disabled', 'auth.throttled', 'auth.reset_requested'];
+    /** Envoyées automatiquement ; l'auteur réel figure sur la ligne « Compte créé » ou « Lien envoyé ». */
+    private const SYSTEM = ['auth.invitation_sent'];
 
     public static function label(string $action): string
     {
@@ -46,6 +54,16 @@ final class AuditLabels
     public static function isAlert(string $action): bool
     {
         return in_array($action, self::ALERTS, true);
+    }
+
+    /** Auteur affiché dans la colonne « Par ». */
+    public static function actor(string $action, ?string $userName): string
+    {
+        return match (true) {
+            in_array($action, self::ANONYMOUS, true) => 'Inconnu',
+            in_array($action, self::SYSTEM, true), $userName === null => 'Système',
+            default => $userName,
+        };
     }
 
     /** @return array<string,string> */
@@ -69,7 +87,10 @@ final class AuditLabels
         $pairs = [];
         foreach (self::DETAIL_KEYS as $key => $label) {
             if (isset($data[$key]) && $data[$key] !== [] && $data[$key] !== '') {
-                $pairs[] = [$label, is_array($data[$key]) ? implode(', ', array_map('strval', $data[$key])) : (string) $data[$key]];
+                $value = $key === 'changes' && is_array($data[$key])
+                    ? array_map(static fn ($f) => self::FIELDS[$f] ?? (string) $f, $data[$key])
+                    : $data[$key];
+                $pairs[] = [$label, is_array($value) ? implode(', ', array_map('strval', $value)) : (string) $value];
             }
         }
         return $pairs;

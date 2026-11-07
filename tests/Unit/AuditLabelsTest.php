@@ -31,12 +31,26 @@ final class AuditLabelsTest extends TestCase
         $this->assertSame('futur.x', AuditLabels::label('futur.x'));
         $this->assertSame([], AuditLabels::details(null));
         $this->assertSame([['Email', 'a@b.c']], AuditLabels::details('{"email":"a@b.c","roles":[5]}'));
-        $this->assertSame([['Champs modifiés', 'phone, last_name']], AuditLabels::details('{"changes":["phone","last_name"]}'));
     }
 
     public function testAlerts(): void
     {
         $this->assertTrue(AuditLabels::isAlert('auth.login_failed'));
         $this->assertFalse(AuditLabels::isAlert('auth.login'));
+    }
+
+    public function testActorForAnonymousOrSystemActions(): void
+    {
+        $this->assertSame('Inconnu', AuditLabels::actor('auth.login_failed', 'Awa Diallo'));
+        $this->assertSame('Inconnu', AuditLabels::actor('auth.reset_requested', 'Awa Diallo'));
+        $this->assertSame('Système', AuditLabels::actor('auth.invitation_sent', 'Awa Diallo'));
+        $this->assertSame('Awa Diallo', AuditLabels::actor('user.updated', 'Awa Diallo'));
+        $this->assertSame('Système', AuditLabels::actor('user.updated', null));
+    }
+
+    public function testDetailsUseFrenchFieldNames(): void
+    {
+        $this->assertSame([['Champs modifiés', 'Téléphone, Nom']], AuditLabels::details('{"changes":["phone","last_name"]}'));
+        $this->assertSame([], AuditLabels::details('{"slug":"auditeur"}'));
     }
 }

@@ -104,6 +104,6 @@ final class RoleService
             throw new ValidationException(['role' => 'Ce rôle est encore attribué à des utilisateurs.']);
         }
         $this->db->run('DELETE FROM roles WHERE id = ?', [$id]);
-        $this->audit->log((int) $actor['id'], 'role.deleted', 'role', $id, ['slug' => $role['slug']]);
+        $this->audit->log((int) $actor['id'], 'role.deleted', 'role', $id, ['name' => $role['name']]);
     }
 }

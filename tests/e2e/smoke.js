@@ -102,7 +102,12 @@ async function minContrast(p, selector) {
   assert.ok(await page.locator('button:has-text("Désactiver")').isVisible(), 'compte toujours actif après Annuler');
   await page.click('button:has-text("Lien de réinitialisation")');
   await dialog.waitFor({ state: 'visible' });
-  await Promise.all([page.waitForNavigation(), dialog.locator('[data-kb-confirm-ok]').click()]);
+  // La confirmation ne vaut qu'une fois (retour arrière depuis le cache du navigateur).
+  await page.route('**/reset-link', r => setTimeout(() => r.continue(), 800));
+  await dialog.locator('[data-kb-confirm-ok]').click({ noWaitAfter: true });
+  assert.strictEqual(await page.evaluate(() => document.querySelector('form[action$="/reset-link"]').dataset.confirmed), undefined, 'confirmation consommée');
+  await page.waitForNavigation();
+  await page.unroute('**/reset-link');
   assert.match(await page.locator('.alert').first().innerText(), /réinitialisation/, 'Confirmer envoie le formulaire');
 
   assert.deepStrictEqual(problems, [], 'aucune erreur console (CSP incluse)');

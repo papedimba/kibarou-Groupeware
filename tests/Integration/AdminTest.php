@@ -234,4 +234,14 @@ final class AdminTest extends IntegrationTestCase
         $body = $this->get('/admin/users/create')->body;
         $this->assertMatchesRegularExpression('/value="' . $this->roleId('collaborateur') . '" id="role\d+"\s*checked/', $body);
     }
+
+    public function testAuditNamesNonUserObjects(): void
+    {
+        $this->createUser('admin5@kibarou.test', ['admin']);
+        $this->login('admin5@kibarou.test', 'Motdepasse123');
+        $this->post('/admin/departments', ['name' => 'Gros œuvre', 'is_active' => '1']);
+        $body = $this->get('/admin/audit', ['action' => 'department.created'])->body;
+        $this->assertStringContainsString('<td data-label="Concerne">', $body);
+        $this->assertMatchesRegularExpression('/data-label="Concerne">\s*Gros œuvre/', $body);
+    }
 }

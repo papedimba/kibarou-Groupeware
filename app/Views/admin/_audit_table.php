@@ -14,11 +14,10 @@ use App\Modules\Admin\AuditLabels;
                     <?php if (AuditLabels::isAlert($action)): ?><span class="badge badge-alert"><?= e(AuditLabels::label($action)) ?></span>
                     <?php else: ?><?= e(AuditLabels::label($action)) ?><?php endif; ?>
                 </td>
-                <?php // Pour une tentative refusée, user_id désigne le compte visé, pas l'auteur. ?>
-                <td data-label="Par"><?= e(in_array($action, ['auth.login_failed', 'auth.login_disabled', 'auth.throttled'], true) ? 'Inconnu' : ($r['user_name'] ?? 'Système')) ?></td>
+                <td data-label="Par"><?= e(AuditLabels::actor($action, $r['user_name'] ?? null)) ?></td>
                 <td data-label="Concerne">
                     <?php if (!empty($r['target_name'])): ?>
-                        <?php if (can('users.view')): ?><a href="<?= e(url('/admin/users/' . (int) $r['entity_id'])) ?>"><?= e($r['target_name']) ?></a><?php else: ?><?= e($r['target_name']) ?><?php endif; ?>
+                        <?php if ($r['entity_type'] === 'user' && can('users.view')): ?><a href="<?= e(url('/admin/users/' . (int) $r['entity_id'])) ?>"><?= e($r['target_name']) ?></a><?php else: ?><?= e($r['target_name']) ?><?php endif; ?>
                     <?php else: ?>—<?php endif; ?>
                 </td>
                 <td data-label="Détails" class="small text-secondary">
