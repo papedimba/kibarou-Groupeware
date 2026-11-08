@@ -21,6 +21,7 @@ final class Middleware
     public function run(array $names, Request $request, callable $controller): Response
     {
         if (!in_array($request->method, ['GET', 'HEAD'], true) && !in_array('install', $names, true)) {
+            $this->tooLarge($request);
             $this->csrf($request);
         }
         foreach ($names as $name) {
@@ -34,6 +35,26 @@ final class Middleware
             };
         }
         return $controller($request);
+    }
+
+    /** Corps refusé par PHP (post_max_size) : POST vide, jeton CSRF compris. Message clair plutôt qu'une erreur 419. */
+    private function tooLarge(Request $request): void
+    {
+        $length = (int) ($request->server['CONTENT_LENGTH'] ?? 0);
+        if ($request->post === [] && $request->files === [] && $length > self::bytes((string) ini_get('post_max_size'))) {
+            throw new HttpException(413);
+        }
+    }
+
+    private static function bytes(string $ini): int
+    {
+        $n = (int) $ini;
+        return match (strtolower(substr(trim($ini), -1))) {
+            'g' => $n * 1024 ** 3,
+            'm' => $n * 1024 ** 2,
+            'k' => $n * 1024,
+            default => $n,
+        };
     }
 
     private function csrf(Request $request): void

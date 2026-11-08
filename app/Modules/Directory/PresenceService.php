@@ -182,11 +182,13 @@ final class PresenceService
                 throw new ValidationException(['until_date' => 'La date de fin doit être comprise entre aujourd\'hui et dans ' . self::MAX_DAYS . ' jours.']);
             }
         }
+        // Note et date de fin ne s'affichent que pour chantier, déplacement et congé : ignorées sinon.
+        $details = in_array($status, ['site', 'travel', 'leave'], true);
         return [
             'status' => $status,
             'site_label' => $status === 'site' ? (string) $data['site_label'] : null,
-            'note' => $data['note'] !== null ? (string) $data['note'] : null,
-            'until_date' => $until,
+            'note' => $details && $data['note'] !== null ? (string) $data['note'] : null,
+            'until_date' => $details ? $until : null,
         ];
     }
 

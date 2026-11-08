@@ -16,6 +16,8 @@ final class AvatarService
 {
     private const MAX_BYTES = 5 * 1024 * 1024;
     private const MAX_SIDE = 6000;
+    // Décoder 6000×6000 coûte ~280 Mo de mémoire : plafond en pixels pour rester sûr sur un mutualisé.
+    private const MAX_PIXELS = 24_000_000;
     private const SIZE = 256;
     private const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -79,6 +81,9 @@ final class AvatarService
             throw $fail('Le serveur ne peut pas traiter les images. Contactez un administrateur.');
         }
         $tmp = (string) ($file['tmp_name'] ?? '');
+        if (in_array($file['error'] ?? null, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
+            throw $fail('La photo ne doit pas dépasser 5 Mo.');
+        }
         if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || $tmp === '' || !is_file($tmp)) {
             throw $fail('Choisissez une photo à envoyer.');
         }
@@ -93,11 +98,29 @@ final class AvatarService
         if ($size === false || $size[0] < 1 || $size[1] < 1 || $size[0] > self::MAX_SIDE || $size[1] > self::MAX_SIDE) {
             throw $fail('Cette image est illisible ou trop grande (6000 × 6000 pixels au maximum).');
         }
+        if ($size[0] * $size[1] > self::MAX_PIXELS) {
+            throw $fail('Cette image est trop grande (24 mégapixels au maximum).');
+        }
         $image = @imagecreatefromstring((string) file_get_contents($tmp));
         if ($image === false) {
             throw $fail('Cette image est illisible.');
         }
-        return $image;
+        return $this->orient($image, $tmp, (int) $size[2]);
+    }
+
+    /** Les téléphones enregistrent souvent la photo couchée + une balise EXIF d'orientation, perdue au réencodage. */
+    private function orient(\GdImage $image, string $tmp, int $type): \GdImage
+    {
+        if ($type !== IMAGETYPE_JPEG || !function_exists('exif_read_data')) {
+            return $image;
+        }
+        $angle = match ((int) ((@exif_read_data($tmp) ?: [])['Orientation'] ?? 1)) {
+            3 => 180,
+            6 => -90,
+            8 => 90,
+            default => 0,
+        };
+        return $angle === 0 ? $image : (imagerotate($image, $angle, 0) ?: $image);
     }
 
     private function unlink(?string $relative): void

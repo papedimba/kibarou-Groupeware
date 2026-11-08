@@ -21,6 +21,7 @@ final class HttpException extends RuntimeException
             403 => 'Accès refusé.',
             404 => 'Page introuvable.',
             405 => 'Méthode non autorisée.',
+            413 => 'Le fichier envoyé est trop volumineux (5 Mo au maximum).',
             419 => 'Votre session a expiré. Rechargez la page et réessayez.',
             429 => 'Trop de tentatives. Réessayez plus tard.',
             default => 'Une erreur est survenue.',

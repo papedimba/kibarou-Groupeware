@@ -43,7 +43,11 @@ final class DirectoryController extends Controller
 
     public function photo(Request $request): Response
     {
-        $person = $this->repo()->find($this->id($request)) ?? throw new HttpException(404);
+        $id = $this->id($request);
+        if ($id !== (int) $this->user()['id'] && !can('directory.view')) {
+            throw new HttpException(403);
+        }
+        $person = $this->repo()->find($id) ?? throw new HttpException(404);
         $path = $person['avatar_path'] ? $this->app->avatars()->absolutePath((string) $person['avatar_path']) : null;
         if ($path === null) {
             throw new HttpException(404);

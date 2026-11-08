@@ -56,12 +56,14 @@ $this->layout('layouts/app', ['title' => 'Mon profil', 'breadcrumbs' => [['Mon p
                 <?php endif; ?>
             </div>
         </section>
+        <?php if (can('directory.view')): ?>
         <section class="card mt-4" aria-labelledby="my-status-title">
             <h2 class="card-header h6 m-0" id="my-status-title">Mon statut du jour</h2>
             <div class="card-body">
                 <?= $this->partial('partials/presence_form', ['targetId' => null, 'status' => $myStatus, 'returnTo' => '/profile', 'errors' => $errors, 'old' => $old, 'idPrefix' => 'profil']) ?>
             </div>
         </section>
+        <?php endif; ?>
     </div>
     <div class="col-lg-7">
         <div class="card">

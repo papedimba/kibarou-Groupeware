@@ -138,6 +138,8 @@
             var checked = form.querySelector('input[name=status]:checked'), v = checked ? checked.value : '';
             details.hidden = ['site', 'travel', 'leave'].indexOf(v) === -1;
             site.hidden = v !== 'site';
+            // Un champ masqué n'est pas envoyé : l'utilisateur ne peut pas enregistrer ce qu'il ne voit pas.
+            details.querySelectorAll('input').forEach(function (i) { i.disabled = i.closest('[hidden]') !== null; });
         };
         form.querySelectorAll('input[name=status]').forEach(function (r) { r.addEventListener('change', sync); });
         sync();

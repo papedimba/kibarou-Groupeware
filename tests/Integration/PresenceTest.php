@@ -183,4 +183,13 @@ final class PresenceTest extends IntegrationTestCase
         $this->assertSame(403, $r->status);
         $this->assertSame(0, (int) $this->app->db()->value('SELECT COUNT(*) FROM user_presence'));
     }
+
+    public function testOfficeIgnoresHiddenDetails(): void
+    {
+        $id = $this->createUser('moi@kibarou.test');
+        $this->login('moi@kibarou.test', 'Motdepasse123');
+        $this->post('/presence', ['status' => 'office', 'until_date' => $this->day('+3 days'), 'note' => 'reste du chantier']);
+        $row = $this->app->db()->fetch('SELECT until_date, note FROM user_presence WHERE user_id = ?', [$id]);
+        $this->assertSame(['until_date' => null, 'note' => null], $row);
+    }
 }

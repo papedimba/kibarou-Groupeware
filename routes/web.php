@@ -37,6 +37,8 @@ return static function (Router $r): void {
         $r->get('/profile/password', [ProfileController::class, 'passwordForm']);
         $r->post('/profile/password', [ProfileController::class, 'changePassword']);
         $r->post('/profile/sessions/revoke', [ProfileController::class, 'revokeSession']);
+        // Photo : sa propre photo toujours, celles des autres avec directory.view (contrôlé dans le contrôleur).
+        $r->get('/directory/{id}/photo', [DirectoryController::class, 'photo']);
         $r->post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
         $r->post('/profile/photo/delete', [ProfileController::class, 'deletePhoto']);
 
@@ -44,7 +46,6 @@ return static function (Router $r): void {
             $r->get('/directory', [DirectoryController::class, 'index']);
             $r->get('/directory/org', [DirectoryController::class, 'org']);
             $r->get('/directory/{id}', [DirectoryController::class, 'show']);
-            $r->get('/directory/{id}/photo', [DirectoryController::class, 'photo']);
             $r->post('/presence', [PresenceController::class, 'update']);
             $r->post('/presence/clear', [PresenceController::class, 'clear']);
             $r->post('/presence/team', [PresenceController::class, 'team']);
