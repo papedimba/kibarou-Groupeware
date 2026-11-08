@@ -33,6 +33,9 @@ final class AuditLabels
         'position.created' => 'Fonction créée',
         'position.updated' => 'Fonction modifiée',
         'presence.updated' => 'Statut modifié',
+        'chat.group_created' => 'Groupe de messagerie créé',
+        'chat.member_added' => 'Membre ajouté à un groupe',
+        'chat.member_left' => 'Groupe de messagerie quitté',
         'profile.photo_updated' => 'Photo modifiée',
         'user.photo_removed' => 'Photo retirée',
     ];

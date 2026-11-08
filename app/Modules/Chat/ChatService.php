@@ -19,6 +19,7 @@ final class ChatService
 {
     public const MAX_LENGTH = 4000;
     private const MAX_PER_MINUTE = 30;
+    private const MAX_MEMBERS = 51;
 
     public function __construct(
         private readonly Database $db,
@@ -94,6 +95,86 @@ final class ChatService
         });
     }
 
+    /**
+     * @param array<string,mixed> $actor
+     * @param list<int> $memberIds autres membres (2 à 50)
+     */
+    public function createGroup(array $actor, string $name, array $memberIds): int
+    {
+        $me = (int) $actor['id'];
+        $name = $this->validName($name);
+        $ids = array_values(array_unique(array_filter(array_map('intval', $memberIds), static fn ($id) => $id !== $me)));
+        if (count($ids) < 2 || count($ids) > self::MAX_MEMBERS - 1) {
+            throw new ValidationException(['members' => 'Un groupe réunit de 2 à ' . (self::MAX_MEMBERS - 1) . ' autres personnes.']);
+        }
+        $this->requireChatUsers($ids);
+        $cid = $this->db->transaction(function () use ($me, $name, $ids) {
+            $cid = $this->db->insert('conversations', ['type' => 'group', 'name' => $name, 'created_by' => $me, 'created_at' => now_utc(), 'last_event_at' => now_utc()]);
+            $created = $this->event($cid, 'created', $me);
+            $this->db->insert('conversation_members', ['conversation_id' => $cid, 'user_id' => $me, 'joined_event_id' => $created]);
+            foreach ($ids as $uid) {
+                $this->db->insert('conversation_members', ['conversation_id' => $cid, 'user_id' => $uid, 'joined_event_id' => $created]);
+                $this->event($cid, 'member_added', $me, $uid);
+            }
+            return $cid;
+        });
+        $this->audit->log($me, 'chat.group_created', 'conversation', $cid, ['count' => count($ids) + 1]);
+        return $cid;
+    }
+
+    /** @param array<string,mixed> $actor @param list<int> $userIds */
+    public function addMembers(array $actor, int $cid, array $userIds): void
+    {
+        $me = (int) $actor['id'];
+        $this->requireGroup($me, $cid);
+        $active = array_map('intval', array_column($this->repo->members($cid), 'id'));
+        $ids = array_values(array_diff(array_unique(array_map('intval', $userIds)), $active));
+        if ($ids === []) {
+            return;
+        }
+        if (count($active) + count($ids) > self::MAX_MEMBERS) {
+            throw new ValidationException(['members' => 'Un groupe compte au plus ' . self::MAX_MEMBERS . ' membres.']);
+        }
+        $this->requireChatUsers($ids);
+        $this->db->transaction(function () use ($me, $cid, $ids) {
+            foreach ($ids as $uid) {
+                // Le nouveau membre voit son ajout et la suite, jamais ce qui précède.
+                $before = (int) $this->db->value('SELECT COALESCE(MAX(id), 0) FROM chat_events WHERE conversation_id = ?', [$cid]);
+                $this->event($cid, 'member_added', $me, $uid);
+                $this->db->run(
+                    'INSERT INTO conversation_members (conversation_id, user_id, joined_event_id, left_at, last_read_event_id)
+                     VALUES (?, ?, ?, NULL, ?) ON DUPLICATE KEY UPDATE joined_event_id = VALUES(joined_event_id), left_at = NULL, last_read_event_id = VALUES(last_read_event_id), last_read_at = NULL',
+                    [$cid, $uid, $before, $before],
+                );
+                $this->audit->log($me, 'chat.member_added', 'conversation', $cid);
+            }
+        });
+    }
+
+    /** @param array<string,mixed> $actor */
+    public function leave(array $actor, int $cid): void
+    {
+        $me = (int) $actor['id'];
+        $this->requireGroup($me, $cid);
+        $this->db->transaction(function () use ($me, $cid) {
+            $this->event($cid, 'member_left', $me, $me);
+            $this->db->run('UPDATE conversation_members SET left_at = UTC_TIMESTAMP() WHERE conversation_id = ? AND user_id = ?', [$cid, $me]);
+        });
+        $this->audit->log($me, 'chat.member_left', 'conversation', $cid);
+    }
+
+    /** @param array<string,mixed> $actor */
+    public function rename(array $actor, int $cid, string $name): void
+    {
+        $me = (int) $actor['id'];
+        $this->requireGroup($me, $cid);
+        $name = $this->validName($name);
+        $this->db->transaction(function () use ($me, $cid, $name) {
+            $this->db->update('conversations', ['name' => $name], ['id' => $cid]);
+            $this->event($cid, 'renamed', $me);
+        });
+    }
+
     /** @return array<string,mixed> appartenance active, sinon 404 (un identifiant n'est jamais une preuve) */
     public function requireMember(int $userId, int $conversationId): array
     {
@@ -109,6 +190,35 @@ final class ChatService
         ]);
         $this->db->run('UPDATE conversations SET last_event_at = UTC_TIMESTAMP() WHERE id = ?', [$conversationId]);
         return $id;
+    }
+
+    /** @return array<string,mixed> */
+    private function requireGroup(int $userId, int $cid): array
+    {
+        $m = $this->requireMember($userId, $cid);
+        if ($m['type'] !== 'group') {
+            throw new ValidationException(['members' => 'Action réservée aux groupes.']);
+        }
+        return $m;
+    }
+
+    private function validName(string $name): string
+    {
+        $name = trim($name);
+        if ($name === '' || mb_strlen($name) > 80) {
+            throw new ValidationException(['name' => 'Le nom du groupe doit compter de 1 à 80 caractères.']);
+        }
+        return $name;
+    }
+
+    /** @param list<int> $ids */
+    private function requireChatUsers(array $ids): void
+    {
+        foreach ($ids as $id) {
+            if ($this->activeChatUser($id) === null) {
+                throw new ValidationException(['members' => 'Une des personnes choisies ne peut pas utiliser la messagerie.']);
+            }
+        }
     }
 
     /** @return array<string,mixed>|null utilisateur actif autorisé à utiliser la messagerie */
