@@ -93,4 +93,17 @@ final class InfrastructureTest extends IntegrationTestCase
         $this->assertSame(2, $result['presence']);
         $this->assertSame([$valid], array_map('intval', array_column($db->fetchAll('SELECT user_id FROM user_presence'), 'user_id')));
     }
+
+    public function testMaintenancePurgesOldNotifications(): void
+    {
+        $db = $this->app->db();
+        $u = $this->createUser('moi@kibarou.test');
+        $ago = static fn (int $d) => gmdate('Y-m-d H:i:s', strtotime("-$d days"));
+        foreach ([['vieille lue', $ago(91), $ago(91)], ['tres vieille', $ago(366), null], ['recente lue', $ago(10), $ago(10)]] as [$t, $c, $r]) {
+            $db->insert('notifications', ['user_id' => $u, 'type' => 'presence.changed', 'title' => $t, 'created_at' => $c, 'read_at' => $r]);
+        }
+        $result = (new Maintenance($db, $this->app->config('retention'), $this->app->config('session'), $this->app->presence()->today()))->run();
+        $this->assertSame(2, $result['notifications']);
+        $this->assertSame(['recente lue'], array_column($db->fetchAll('SELECT title FROM notifications'), 'title'));
+    }
 }

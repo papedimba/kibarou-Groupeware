@@ -38,6 +38,11 @@ final class Maintenance
                  OR user_id IN (SELECT id FROM users WHERE status = 'disabled' OR deleted_at IS NOT NULL)",
                 [$this->today],
             ),
+            'notifications' => $this->delete(
+                'DELETE FROM notifications WHERE (read_at IS NOT NULL AND read_at < UTC_TIMESTAMP() - INTERVAL 90 DAY)
+                 OR created_at < UTC_TIMESTAMP() - INTERVAL 365 DAY',
+                [],
+            ),
             'audit_logs' => $this->delete('DELETE FROM audit_logs WHERE created_at < UTC_TIMESTAMP() - INTERVAL ? DAY', [$r['audit_logs_days']]),
         ];
     }

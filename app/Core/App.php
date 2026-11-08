@@ -9,6 +9,7 @@ use App\Modules\Auth\PasswordResetService;
 use App\Modules\Directory\AvatarService;
 use App\Modules\Directory\DirectoryRepository;
 use App\Modules\Directory\PresenceService;
+use App\Modules\Notifications\Notifier;
 use App\Services\AuditLogger;
 use App\Services\MailQueue;
 use App\Services\Rbac;
@@ -130,6 +131,11 @@ final class App
     public function avatars(): AvatarService
     {
         return $this->service(AvatarService::class, fn () => new AvatarService($this->db(), $this->config['paths']['storage'] . '/private'));
+    }
+
+    public function notifier(): Notifier
+    {
+        return $this->service(Notifier::class, fn () => new Notifier($this->db(), $this->mailQueue(), (string) $this->config['app']['url']));
     }
 
     public function presence(): PresenceService
