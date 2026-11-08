@@ -54,6 +54,18 @@ l'autorisation à chaque téléchargement (`Content-Disposition: attachment`, `n
 - Limite de 30 messages par minute et par personne (429) ; messages refusés vers un compte désactivé.
 - Notifications et emails sans contenu de message ; audit des actions de groupe sans contenu.
 
+## Pièces jointes de la messagerie (lot 4b)
+- Liste blanche contrôlée sur le **contenu réel** (`finfo`) : photos JPEG/PNG/WebP, `.docx`, `.xlsx`, PDF. Les `.docx`/`.xlsx`
+  sont ouverts (`ZipArchive`) : il faut un vrai document Word ou Excel, et tout fichier contenant des macros (`vbaProject.bin`)
+  est refusé ; sans l'extension zip, ces formats sont refusés. Anciens `.doc`/`.xls` refusés (macros non détectables simplement).
+- Photos décodées puis réencodées en WebP (métadonnées EXIF et GPS supprimées) ; seule la version réduite est conservée.
+- Stockage hors de la racine web, nom aléatoire sans extension exécutable ; nom d'origine assaini, gardé en base pour l'affichage.
+- Téléchargement : membre actif, message postérieur à son arrivée et non supprimé, sinon 404 ; fichiers toujours servis en
+  `Content-Disposition: attachment`, `X-Content-Type-Options: nosniff`, cache privé.
+- Une pièce jointe ne peut être rattachée qu'au message de son expéditeur, dans sa conversation, une seule fois (verrou en base).
+- 6 Mo par fichier, 10 par message, 30 fichiers par minute et par personne.
+- Modification et suppression : auteur seulement, 15 minutes au plus après l'envoi, contrôlé par le serveur.
+
 ## Points ouverts / recommandations
 - **2FA (TOTP)** pour les super administrateurs : recommandée, prévue au lot 10.
 - **Adresse IP derrière un proxy** : seul `REMOTE_ADDR` est pris en compte. Si Likuid place un reverse proxy devant

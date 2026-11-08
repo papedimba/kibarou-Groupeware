@@ -314,10 +314,10 @@ a.kb-chat-sub { color: var(--kb-blue); padding: .2rem 0; }
 /* Messagerie 4b : pièces jointes, réponse citée, réactions, actions */
 .kb-msg-text + *, * + .kb-msg-text { margin-top: .35rem; }
 .kb-msg-deleted { color: var(--kb-gray-500); }
-.kb-msg.is-mine .kb-msg-deleted { color: #dbe6ff; }
+.kb-msg.is-mine .kb-msg-deleted { color: #fff; }
 .kb-msg-reply { display: block; margin: 0 0 .4rem; padding: .3rem .55rem; border-radius: 8px; background: var(--kb-gray-50); color: var(--kb-text);
     font-size: .85rem; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; box-shadow: inset 2px 0 0 var(--kb-blue); }
-.kb-msg.is-mine .kb-msg-reply { background: rgba(255, 255, 255, .16); color: #fff; box-shadow: inset 2px 0 0 #fff; }
+.kb-msg.is-mine .kb-msg-reply { background: rgba(15, 31, 61, .22); color: #fff; box-shadow: inset 2px 0 0 #fff; }
 .kb-msg-reply:hover { text-decoration: underline; }
 .kb-msg-photos { display: grid; gap: 4px; margin: 0 -.35rem; border-radius: 12px; overflow: hidden; width: min(320px, 62vw); }
 .kb-msg-photos-2, .kb-msg-photos-4 { grid-template-columns: 1fr 1fr; }

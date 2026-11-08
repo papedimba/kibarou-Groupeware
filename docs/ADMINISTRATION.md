@@ -69,6 +69,11 @@ d'un utilisateur ferme ses sessions, pour que ses nouveaux droits s'appliquent t
 - Les conversations sont privées : un administrateur ne peut pas les lire. Le journal d'audit enregistre la création des groupes, les ajouts et les départs, jamais le contenu.
 - Un compte désactivé ne peut plus recevoir de messages ; ses messages passés restent visibles des autres membres.
 
+### Pièces jointes, réponses, réactions (lot 4b)
+- Chacun peut joindre des photos, des fichiers Word (.docx), Excel (.xlsx) ou PDF, jusqu'à 10 par message et 6 Mo par fichier. Les photos sont réduites automatiquement. Les anciens formats .doc et .xls sont refusés : il faut enregistrer le fichier en .docx ou .xlsx.
+- Répondre, réagir, modifier ou supprimer : bouton « … » au survol sur PC, appui long sur téléphone. Modifier et supprimer ne sont possibles que sur ses propres messages, pendant 15 minutes.
+- **Espace disque** : *Vue d'ensemble* affiche la place occupée par les pièces jointes, avec une alerte au-delà du seuil `CHAT_STORAGE_WARN_MB` (2 000 Mo par défaut). Les fichiers ne sont pas purgés automatiquement : ils disparaissent avec la suppression de leur message.
+
 ## Surveillance
 L'**Accueil** d'un administrateur affiche des raccourcis et trois alertes : comptes pas encore connectés, échecs de connexion sur 24 h, emails en échec. **Administration › Vue d'ensemble** : utilisateurs actifs, connectés, échecs de connexion sur 24 h, emails en échec,
 et une alerte si la tâche CRON ne s'exécute plus. **Journal d'audit** : toutes les actions sensibles, en français, filtrables par type d'action.

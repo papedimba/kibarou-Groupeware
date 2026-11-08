@@ -41,6 +41,7 @@ Copier `.env.example` en `.env` (à la racine du projet, jamais dans `public/`) 
 
 Rythme d'interrogation de la messagerie (facultatif, en millisecondes) : `CHAT_POLL_ACTIVE_MS` (3000), `CHAT_POLL_IDLE_MS`
 (10000), `CHAT_POLL_BACKGROUND_MS` (30000). Si Likuid signale une charge trop élevée, augmenter d'abord `CHAT_POLL_IDLE_MS`.
+Seuil d'alerte de l'espace occupé par les pièces jointes : `CHAT_STORAGE_WARN_MB` (2000).
 
 ## 5. Installation de la base et du premier compte
 
@@ -92,7 +93,9 @@ Elle envoie les emails en file et applique la politique de conservation. Si elle
 
 - [ ] PHP ≥ 8.2 et extensions vérifiés (`phpinfo()` temporaire, **supprimé** ensuite)
 - [ ] Limites d'envoi : `upload_max_filesize` ≥ 6M et `post_max_size` ≥ 8M (fichier `public/.user.ini` fourni ; sinon à régler dans le panneau Likuid)
-- [ ] Extension GD avec prise en charge WebP active (photos de profil) ; sans elle, l'envoi de photo est refusé avec un message clair
+- [ ] Extension GD avec prise en charge WebP active (photos de profil et de la messagerie) ; sans elle, l'envoi de photo est refusé avec un message clair
+- [ ] Extensions `fileinfo`, `exif` et `zip` actives (contrôle des pièces jointes ; sans `zip`, les .docx/.xlsx sont refusés)
+- [ ] Quota disque de l'hébergement connu et seuil `CHAT_STORAGE_WARN_MB` réglé en conséquence ; `storage/private/chat` inclus dans la sauvegarde
 - [ ] Limites Likuid obtenues par écrit (CPU, processus, connexions SQL, requêtes/heure) et reportées dans PLAN.md
 - [ ] HTTPS actif, redirection HTTP → HTTPS effective, HSTS présent (indispensable aussi aux alertes du navigateur et au service worker `/sw.js`)
 - [ ] `APP_ENV=production`, `APP_DEBUG=false`, `SESSION_SECURE=true`

@@ -102,8 +102,20 @@ Le mutualisé interdit les processus permanents : la messagerie utilise du **pol
   automatique ne compte pas comme interaction), recouvrement de 20 évènements à chaque interrogation (dédoublonnés), rendu par `textContent` (seuls les liens `http(s)` deviennent cliquables), brouillons en
   `localStorage`, bulle « Non envoyé — Réessayer » en cas d'échec réseau. Sans JavaScript, la page reste utilisable
   (envoi par formulaire classique).
-- Reporté aux lots 4b/4c : salons et salons de service, pièces jointes, réactions, réponses, modification et suppression,
-  accusés de lecture détaillés, indicateur de saisie, recherche.
+
+**Réalisé au lot 4b** (conception : `docs/superpowers/specs/2026-11-08-messagerie-4b-design.md`) :
+
+- Pièces jointes envoyées **une par requête** avant le message (`POST /api/chat/conversations/{id}/attachments`, sous la
+  limite de 8 Mo de l'hébergement), puis citées par le message (`attachment_ids`) ; photos réduites dans le navigateur
+  (`chat-attachments.js`, 2 000 px) puis revérifiées et réencodées en WebP par `ChatAttachmentService` ; orphelins
+  effacés après 24 h par `cron:run`.
+- `client_id` (32 hexadécimaux créés par le navigateur, unique par expéditeur) : un envoi rejoué renvoie le message
+  existant au lieu d'en créer un second.
+- Nouveaux évènements `message_edited`, `message_deleted`, `reaction` : portent l'état à jour du message visé (mêmes
+  champs qu'un évènement `message`), livrés seulement si le message d'origine est visible du lecteur, sans effet sur
+  l'ordre de la liste ni sur les non-lus. `ChatRepository::hydrate()` ajoute pièces jointes, réactions et extrait cité,
+  pour la page comme pour l'API.
+- Reporté au lot 4c : salons et salons de service, accusés de lecture détaillés, indicateur de saisie, recherche.
 
 **Charge estimée** (hypothèse : 50 utilisateurs dont 30 actifs simultanément, intervalle moyen de 8 s) :
 environ 4 requêtes HTTP/s et 4 requêtes SQL légères/s. À confronter aux limites chiffrées de Likuid ; les

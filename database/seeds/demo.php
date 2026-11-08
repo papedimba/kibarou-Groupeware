@@ -84,7 +84,29 @@ $db->transaction(function () use ($db, $hash, $now, $app) {
     $chat->send($u('seydou.coulibaly'), $direct, "Ferraillage terminé ce matin, coulage prévu demain à 7 h si le béton est livré.");
     $group = $chat->createGroup($u('moussa.traore'), 'Chantier Résidence Les Palmiers', [$ids['seydou.coulibaly'], $ids['fatou.kone']]);
     $chat->send($u('fatou.kone'), $group, "Les plans d'exécution du bâtiment B sont à jour :\nhttps://kibarou.example/plans/palmiers-b");
-    $chat->send($u('moussa.traore'), $group, "Merci Fatou. Réunion de chantier jeudi à 9 h sur place.");
+    $meeting = $chat->send($u('moussa.traore'), $group, "Merci Fatou. Réunion de chantier jeudi à 9 h sur place.");
+    // Pièces jointes de démonstration : une photo générée et un tableau Excel minimal.
+    $photo = imagecreatetruecolor(1600, 1200);
+    imagefill($photo, 0, 0, imagecolorallocate($photo, 168, 162, 150));
+    for ($i = 0; $i < 12; $i++) {
+        imagefilledrectangle($photo, 100 + $i * 120, 300, 160 + $i * 120, 1100, imagecolorallocate($photo, 90, 70, 60));
+    }
+    $photoFile = tempnam(sys_get_temp_dir(), 'kbdemo');
+    imagejpeg($photo, $photoFile, 85);
+    $sheetFile = tempnam(sys_get_temp_dir(), 'kbdemo');
+    $zip = new ZipArchive();
+    $zip->open($sheetFile, ZipArchive::OVERWRITE);
+    $zip->addFromString('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Types>');
+    $zip->addFromString('xl/workbook.xml', '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"/>');
+    $zip->close();
+    $ids = [];
+    foreach ([['Ferraillage bâtiment B.jpg', $photoFile], ['Suivi béton semaine 45.xlsx', $sheetFile]] as [$name, $file]) {
+        $ids[] = (int) $chat->uploadAttachment($u('seydou.coulibaly'), $group, ['name' => $name, 'tmp_name' => $file, 'error' => UPLOAD_ERR_OK, 'size' => filesize($file)])['id'];
+    }
+    $chat->send($u('seydou.coulibaly'), $group, 'Ferraillage du bâtiment B terminé, et le suivi béton à jour.', null, $ids, $meeting['message_id']);
+    $last = (int) $db->value('SELECT MAX(id) FROM messages');
+    $chat->react($u('moussa.traore'), $last, '👍');
+    $chat->react($u('fatou.kone'), $last, '✅');
     // Aucun email de démonstration : les notifications de messages sont considérées comme traitées.
     $db->run("UPDATE notifications SET email_status = 'digested' WHERE type = 'chat.message'");
 });

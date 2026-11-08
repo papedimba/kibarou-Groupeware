@@ -43,7 +43,8 @@ Légende : ✅ terminé et testé · 🔜 prochain · ⏳ planifié
 | 2. Annuaire + profil enrichi | Annuaire, fiche, organigramme par service, présence (statut déclaré + en ligne), deux téléphones, photo privée | ✅ |
 | 3. Notifications | Centrale, cloche, préférences, alertes navigateur PC/Android, emails immédiats et récapitulatif à 7 h | ✅ |
 | 4a. Messagerie : privé et groupes | Conversations privées, groupes, non-lus, interrogation adaptative, brouillons, envoi sans JavaScript | ✅ |
-| 4b/4c. Messagerie : suite | Salons, salons de service, pièces jointes privées, réactions, réponses, modification, suppression logique, accusés, indicateur de saisie, recherche | 🔜 |
+| 4b. Messagerie : le confort | Pièces jointes (photos réduites, .docx, .xlsx, PDF), réponses citées, réactions, modification et suppression sous 15 minutes, envoi sans doublon | ✅ |
+| 4c. Messagerie : l'organisation | Salons, salons de service, accusés de lecture, indicateur de saisie, recherche | 🔜 |
 | 5. Calendrier + réunions | Événements, participants, invitations, rappels CRON, récurrence (RRULE simplifiée), export ICS ; convocations, ordre du jour, comptes rendus, décisions, actions | ⏳ |
 | 6. Tâches + projets | Tâches, Kanban, commentaires, pièces jointes, historique ; projets, membres, jalons, progression | ⏳ |
 | 7. Documents | Dossiers, versions, permissions, corbeille, téléchargement sécurisé, recherche | ⏳ |
@@ -97,3 +98,9 @@ Ordre justifié : l'annuaire et les notifications sont des dépendances de la me
 - Tests : 185 PHPUnit ; test de fumée Playwright avec échange réel entre deux comptes, texte non envoyé conservé, session expirée signalée.
 - Relecture finale indépendante : 2 points importants et 7 mineurs vérifiés ; corrigés sauf trois mineurs reportés (course ajout de membre / message simultané, double envoi possible si « Réessayer » précède la confirmation, test du doublon de création concurrente indirect).
 - À mesurer chez Likuid : charge de l'interrogation (checklist de mise en production).
+
+### Lot 4b — Messagerie : le confort — 08/11/2026
+- Conception : `docs/superpowers/specs/2026-11-08-messagerie-4b-design.md` ; plan : `docs/superpowers/plans/2026-11-08-lot4b-messagerie.md`.
+- Livré : photos (réduites dans le navigateur puis réencodées, seule la version réduite est gardée), fichiers .docx/.xlsx contrôlés sans macros, PDF, anciens .doc/.xls refusés ; envoi fichier par fichier avec progression et reprise ; aperçu avant envoi ; visionneuse ; réponses citées ; six réactions ; modification et suppression de ses messages sous 15 minutes ; envoi sans doublon (identifiant créé par le navigateur) ; espace disque des pièces jointes dans l'administration ; nettoyage des fichiers abandonnés.
+- Tests : 206 PHPUnit ; test de fumée Playwright à deux comptes (photo réduite avant envoi, réponse, réaction, modification, suppression, pas de doublon).
+- À vérifier chez Likuid : extensions `zip`, `fileinfo`, `exif` ; quota disque (checklist de mise en production).

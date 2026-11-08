@@ -79,6 +79,18 @@ Permissions livrées : `admin.access`, `users.view`, `users.manage`, `organizati
 
 Le contenu des messages n'est jamais copié dans les notifications, les emails ni le journal d'audit.
 
+## Lot 4b : confort de la messagerie (migration 0007)
+
+| Table / colonne | Rôle |
+|---|---|
+| `messages.client_id` | Identifiant créé par le navigateur, unique par expéditeur `(sender_id, client_id)` : envoi rejouable sans doublon |
+| `messages.reply_to_id`, `edited_at`, `deleted_at` | Réponse citée ; mention « modifié » ; suppression (texte vidé, ligne conservée pour l'historique) |
+| `chat_attachments` | Une ligne par pièce jointe : conversation, expéditeur, message (`NULL` tant qu'elle n'est pas envoyée), `kind` image/file, nom d'origine assaini, chemin privé aléatoire, vignette, type, taille, dimensions |
+| `chat_reactions` | Clé `(message_id, user_id, emoji)` ; six réactions possibles |
+| `chat_events.type` | + `message_edited`, `message_deleted`, `reaction` |
+
+Fichiers : `storage/private/chat/AAAA/MM/<aléatoire>.webp|.bin` (+ `-t.webp` pour la vignette). Supprimer un message efface ses fichiers.
+
 ## Modèle prévu des lots suivants (analyse préalable)
 
 Tables listées dans le cahier des charges, avec les décisions de modélisation prises pour éviter les redondances :
