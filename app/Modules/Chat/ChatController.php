@@ -130,6 +130,7 @@ final class ChatController extends Controller
             'actor_name' => $e['actor_name'],
             'target_user_id' => $e['target_user_id'] !== null ? (int) $e['target_user_id'] : null,
             'target_name' => $e['target_name'],
+            'detail' => $e['detail'],
             'body' => $e['body'],
             'created_at' => str_replace(' ', 'T', (string) $e['created_at']) . 'Z',
         ];
@@ -150,7 +151,7 @@ final class ChatController extends Controller
     {
         $me = (int) $this->user()['id'];
         $repo = new ChatRepository($this->app->db());
-        $data = ['currentPath' => '/chat', 'conversations' => $repo->conversationsFor($me), 'conversation' => null,
+        $data = ['currentPath' => '/chat', 'conversations' => $repo->conversationsFor($me, $cid ?? 0), 'conversation' => null,
             'poll' => (array) $this->app->config('chat.poll'), 'since' => (int) $this->app->db()->value('SELECT COALESCE(MAX(id), 0) FROM chat_events')];
         if ($cid !== null) {
             $membership = $this->app->chat()->requireMember($me, $cid);

@@ -26,36 +26,66 @@
 
     function store(k, v) { try { if (v === null || v === '') { window.localStorage.removeItem(k); } else { window.localStorage.setItem(k, v); } } catch (e) { /* stockage indisponible */ } }
     function load(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+    // Textes partis mais non confirmés par le serveur, par conversation.
+    var unsentKey = 'kb-unsent-' + cid;
+    function unsent() { try { return JSON.parse(load(unsentKey) || '[]'); } catch (e) { return []; } }
+    function keep(text) { var l = unsent(); l.push(text); store(unsentKey, JSON.stringify(l)); }
+    function forget(text) { var l = unsent(), i = l.indexOf(text); if (i !== -1) { l.splice(i, 1); } store(unsentKey, l.length ? JSON.stringify(l) : ''); }
 
     // --- Rythme : actif (interaction récente), au repos, ou onglet en arrière-plan ---
-    var lastInteraction = Date.now();
-    ['keydown', 'pointerdown', 'touchstart', 'wheel', 'scroll'].forEach(function (type) {
-        (type === 'scroll' && box ? box : document).addEventListener(type, function () { lastInteraction = Date.now(); }, { passive: true });
+    // lastInteraction règle le rythme (l'ouverture de la page compte) ; lastInput, lui, ne compte que les vraies
+    // saisies : seul il rend un accusé de lecture « actif » (prolongation de la session).
+    var lastInteraction = Date.now(), lastInput = 0;
+    // Pas d'évènement « scroll » : le défilement automatique à l'arrivée d'un message n'est pas une interaction
+    // (sinon un PC laissé ouvert sur un groupe actif ne se déconnecterait jamais).
+    ['keydown', 'pointerdown', 'touchstart', 'wheel'].forEach(function (type) {
+        document.addEventListener(type, function () { lastInteraction = lastInput = Date.now(); }, { passive: true });
     });
-    function recentlyActive() { return Date.now() - lastInteraction < 60000; }
-    function delay() { return document.hidden ? rhythm.background : (recentlyActive() ? rhythm.active : rhythm.idle); }
+    function recentlyActive() { return Date.now() - lastInput < 60000; }
+    // 3 s conversation ouverte et interaction récente ; 10 s après 1 min ; 30 s après 5 min ou sur la seule liste.
+    function delay() {
+        var idle = Date.now() - lastInteraction;
+        if (!conv || idle >= 300000) { return rhythm.background; }
+        return idle < 60000 ? rhythm.active : rhythm.idle;
+    }
+
+    // Session expirée : plus d'interrogation, message clair ; les textes en cours restent dans la zone de saisie.
+    function sessionExpired() {
+        stopped = true;
+        if (document.querySelector('[data-chat-expired]')) { return; }
+        var n = document.createElement('div');
+        n.className = 'alert alert-warning kb-chat-alert'; n.setAttribute('role', 'alert'); n.setAttribute('data-chat-expired', '');
+        n.textContent = 'Votre session a expiré. Rechargez la page pour vous reconnecter : votre texte est conservé.';
+        (form || root).insertBefore(n, (form || root).firstChild);
+    }
 
     // --- Transport (seul l'interrogation existe en 4a ; un autre transport pourra le remplacer) ---
     var transport = {
         poll: function (from) {
             return fetch(base + 'api/chat/updates?since=' + from, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
                 .then(function (r) {
-                    if (r.status === 401 || r.status === 403) { throw new Error('stop'); }
+                    if (r.status === 401 || r.status === 403) { sessionExpired(); throw new Error('stop'); }
                     return r.ok ? r.json() : null;
                 });
         }
     };
 
-    var timer = null, stopped = false, inFlight = false;
-    function schedule(ms) { clearTimeout(timer); if (!stopped) { timer = setTimeout(tick, ms === undefined ? delay() : ms); } }
+    var timer = null, stopped = false, inFlight = false, seen = {};
+    // Onglet caché : aucune interrogation ; reprise immédiate au retour.
+    function schedule(ms) { clearTimeout(timer); if (!stopped && !document.hidden) { timer = setTimeout(tick, ms === undefined ? delay() : ms); } }
     function tick() {
         if (inFlight) { return schedule(); }
         inFlight = true;
-        transport.poll(since).then(function (data) {
+        // Recouvrement de 20 évènements : un envoi encore en cours de validation chez un autre utilisateur peut
+        // obtenir un identifiant plus petit que le dernier reçu ; les doublons sont écartés par « seen ».
+        transport.poll(Math.max(0, since - 20)).then(function (data) {
             if (!data) { return; }
             data.events.forEach(function (ev) {
+                if (seen[ev.id]) { return; }
+                seen[ev.id] = true;
                 since = Math.max(since, ev.id);
                 if (ev.conversation_id === cid) { appendEvent(ev, true); }
+                if (ev.type === 'renamed') { renamed(ev); }
                 updateListItem(ev, data.unread);
             });
             refreshCounts(data.unread);
@@ -100,7 +130,7 @@
         var byMe = ev.actor_id === me, actor = byMe ? 'Vous avez' : ev.actor_name + ' a';
         if (ev.type === 'member_added') { return ev.target_user_id === me ? ev.actor_name + ' vous a ajouté' : actor + ' ajouté ' + ev.target_name; }
         if (ev.type === 'member_left') { return actor + ' quitté le groupe'; }
-        if (ev.type === 'renamed') { return actor + ' renommé le groupe'; }
+        if (ev.type === 'renamed') { return actor + ' renommé le groupe en « ' + (ev.detail || '') + ' »'; }
         return '';
     }
     function buildEvent(ev) {
@@ -148,6 +178,11 @@
         if (empty) { empty.remove(); }
         var days = box.querySelectorAll('.kb-msg-day'), label = dayLabel(ev.created_at);
         if (!days.length || days[days.length - 1].getAttribute('data-day') !== label) { box.appendChild(daySeparator(label)); }
+        if (fromPoll && ev.sender_id === me) {
+            // Envoi réussi côté serveur malgré une réponse perdue : la bulle « Non envoyé » disparaît.
+            var dup = [].filter.call(box.querySelectorAll('.kb-msg.is-failed'), function (b) { return b.dataset.text === ev.body; })[0];
+            if (dup) { dup.remove(); forget(ev.body); }
+        }
         var pending = box.querySelector('.kb-msg.is-pending');
         box.insertBefore(buildEvent(ev), pending && fromPoll ? pending : null);
         lastEvent = Math.max(lastEvent, ev.id);
@@ -186,6 +221,15 @@
         var time = item.querySelector('.kb-chat-item-time');
         if (time) { time.textContent = 'à l\'instant'; }
         list.insertBefore(item.parentNode, list.firstChild);
+        list.hidden = false;
+        var none = root.querySelector('.kb-chat-empty');
+        if (none) { none.remove(); }
+    }
+    function renamed(ev) {
+        var item = list && list.querySelector('[data-conversation-id="' + ev.conversation_id + '"] .kb-chat-item-title');
+        if (item) { item.textContent = ev.detail; }
+        var title = ev.conversation_id === cid && document.getElementById('chat-title');
+        if (title) { title.textContent = ev.detail; }
     }
     function refreshCounts(unread) {
         if (!list) { return; }
@@ -212,10 +256,13 @@
             var first = box.querySelector('[data-event-id]');
             if (!first) { return; }
             btn.disabled = true;
+            box.setAttribute('aria-busy', 'true');
             fetch(base + 'api/chat/conversations/' + cid + '/history?before=' + first.getAttribute('data-event-id'), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
                 .then(function (r) { return r.ok ? r.json() : null; })
                 .then(function (data) {
                     btn.disabled = false;
+                    // Laisser passer le rendu avant de rétablir l'annonce : l'historique n'est pas lu à voix haute.
+                    setTimeout(function () { box.removeAttribute('aria-busy'); }, 0);
                     if (!data) { return; }
                     var height = box.scrollHeight, anchor = more.nextSibling, day = null;
                     // Le séparateur du premier jour déjà affiché est recréé si besoin : on le retire s'il se répète.
@@ -249,6 +296,15 @@
         error.className = 'invalid-feedback d-block'; error.setAttribute('role', 'alert'); error.hidden = true;
         form.appendChild(error);
 
+        // Textes partis mais non confirmés : conservés à part jusqu'à la réponse du serveur (rechargement, session expirée).
+        var restore = function (text) {
+            input.value = input.value ? text + '\n\n' + input.value : text;
+            store(draftKey, input.value); grow();
+        };
+        // Au chargement : un texte resté sans confirmation revient dans la zone de saisie.
+        unsent().forEach(function (text) { restore(text); });
+        store(unsentKey, '');
+
         var send = function (text, bubble) {
             error.hidden = true;
             return fetch(base + 'api/chat/conversations/' + cid + '/messages', {
@@ -259,20 +315,34 @@
                 return r.json().catch(function () { return {}; }).then(function (data) { return { status: r.status, data: data }; });
             }).then(function (res) {
                 if (res.status === 200 && res.data.event) {
-                    bubble.remove();
-                    appendEvent(res.data.event, false);
+                    forget(text);
+                    confirm(bubble, res.data.event);
                     return;
                 }
-                if (res.status === 422 || res.status === 429 || res.status === 404) {
-                    // Refus définitif : le texte revient dans la zone de saisie pour être corrigé.
+                if ([401, 404, 419, 422, 429].indexOf(res.status) !== -1) {
+                    // Refus définitif : le texte revient dans la zone de saisie, rien n'est perdu.
+                    forget(text);
                     bubble.remove();
-                    if (!input.value) { input.value = text; store(draftKey, text); grow(); }
-                    error.textContent = (res.data.errors && res.data.errors.body) || res.data.error || 'Message refusé.';
+                    restore(text);
+                    if (res.status === 401 || res.status === 419) { sessionExpired(); return; }
+                    error.textContent = res.status === 404 ? 'Vous ne faites plus partie de cette conversation.'
+                        : (res.data.errors && res.data.errors.body) || res.data.error || 'Message refusé.';
                     error.hidden = false;
                     return;
                 }
                 throw new Error('network');
-            }).catch(function () { failed(bubble, text); });
+            }).catch(function () { if (bubble.isConnected) { failed(bubble, text); } });
+        };
+        // La bulle provisoire devient le message confirmé (pas de seconde annonce au lecteur d'écran).
+        var confirm = function (bubble, ev) {
+            if (box.querySelector('[data-event-id="' + ev.id + '"]')) { bubble.remove(); return; }
+            bubble.setAttribute('data-event-id', String(ev.id));
+            bubble.classList.remove('is-pending', 'is-failed');
+            delete bubble.dataset.text;
+            var t = bubble.querySelector('.kb-msg-time');
+            t.textContent = hour(ev.created_at); t.dateTime = ev.created_at;
+            seen[ev.id] = true;
+            lastEvent = Math.max(lastEvent, ev.id);
         };
         var failed = function (bubble, text) {
             bubble.classList.remove('is-pending');
@@ -292,16 +362,18 @@
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             var text = input.value.replace(/\s+$/, '');
-            if (text.trim() === '') { input.focus(); return; }
+            if (text.trim() === '' || stopped) { input.focus(); return; }
             // Bulle provisoire : le texte reste visible même si le réseau du chantier lâche.
-            var bubble = buildEvent({ id: 'p' + Date.now(), type: 'message', sender_id: me, body: text, created_at: new Date().toISOString() });
+            var bubble = buildEvent({ id: 0, type: 'message', sender_id: me, body: text, created_at: new Date().toISOString() });
             bubble.removeAttribute('data-event-id');
+            bubble.dataset.text = text;
             bubble.classList.add('is-pending');
             bubble.querySelector('.kb-msg-time').textContent = 'Envoi…';
             var empty = box.querySelector('[data-chat-empty]');
             if (empty) { empty.remove(); }
             box.appendChild(bubble);
             scrollBottom();
+            keep(text);
             input.value = ''; store(draftKey, ''); grow();
             input.focus();
             lastInteraction = Date.now();

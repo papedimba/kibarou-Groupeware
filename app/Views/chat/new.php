@@ -24,7 +24,7 @@ $selected = array_map('intval', (array) ($old['members'] ?? []));
         </fieldset>
         <div class="mb-3">
             <label class="form-label" for="name">Nom du groupe</label>
-            <input class="form-control<?= invalid($errors, 'name') ?>" id="name" name="name" maxlength="100" value="<?= e($old['name'] ?? '') ?>" aria-describedby="name-help">
+            <input class="form-control<?= invalid($errors, 'name') ?>" id="name" name="name" maxlength="80" value="<?= e($old['name'] ?? '') ?>" aria-describedby="name-help">
             <div class="form-text" id="name-help">À remplir seulement pour un groupe de plusieurs personnes, par exemple « Chantier Pont ».</div>
             <?= field_error($errors, 'name') ?>
         </div>

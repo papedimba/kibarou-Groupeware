@@ -166,20 +166,21 @@
     var bell = document.querySelector('[data-bell]');
     // Racine de l'application (installation possible dans un sous-dossier).
     var base = document.body.getAttribute('data-base') || '/';
-    var registration = null;
     var isIos = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.navigator.standalone;
     if ('serviceWorker' in navigator && !isIos) {
-        navigator.serviceWorker.register(base + 'sw.js', { scope: base }).then(function (r) { registration = r; }).catch(function () { registration = null; });
+        navigator.serviceWorker.register(base + 'sw.js', { scope: base }).catch(function () { /* sans service worker : repli new Notification */ });
     }
     function alertUser(item) {
         if (!('Notification' in window) || Notification.permission !== 'granted') { return; }
         var options = { body: item.title, data: { url: item.url || base + 'notifications' }, tag: 'kb-' + item.id };
-        // L'enregistrement du service worker peut ne pas être encore résolu : on le redemande plutôt que
-        // de retomber sur new Notification(), refusé par Chrome Android (alerte alors perdue).
-        var pending = registration ? Promise.resolve(registration)
-            : ('serviceWorker' in navigator && !isIos ? navigator.serviceWorker.getRegistration(base).catch(function () { return null; }) : Promise.resolve(null));
+        // showNotification exige un service worker ACTIF (sinon refus, alerte perdue) : on attend « ready »,
+        // au plus 3 s, plutôt que new Notification(), refusé par Chrome Android.
+        var pending = 'serviceWorker' in navigator && !isIos
+            ? Promise.race([navigator.serviceWorker.ready, new Promise(function (done) { setTimeout(function () { done(null); }, 3000); })])
+            : Promise.resolve(null);
         pending.then(function (r) {
-            if (r) { r.showNotification('Kibarou Groupware', options); } else { pageAlert(options); }
+            if (!r) { pageAlert(options); return; }
+            r.showNotification('Kibarou Groupware', options).catch(function () { pageAlert(options); });
         });
     }
     function pageAlert(options) {

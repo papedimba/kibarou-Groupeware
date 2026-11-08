@@ -185,6 +185,9 @@ async function minBorderContrast(p, selector) {
       echo (int) $a->db()->value('SELECT id FROM users WHERE email = ?', [getenv('KB_DEMO_EMAIL')]);`]).toString().trim();
     await page.goto(base + '/chat/with/' + bUserId);
     const conversationUrl = page.url();
+    // Un message reçu (défilement automatique compris) n'est pas une interaction : accusé de lecture passif.
+    const reads = [];
+    page.on('request', r => { if (r.url().endsWith('/read')) reads.push(r.postData() || ''); });
     await pageB.goto(conversationUrl);
     const text = 'Smoke ' + Date.now();
     await pageB.fill('#chat-body', text);
@@ -192,6 +195,21 @@ async function minBorderContrast(p, selector) {
     await pageB.locator('.kb-msg.is-mine:not(.is-pending)', { hasText: text }).waitFor({ timeout: 5000 });
     await page.locator('.kb-msg:not(.is-mine)', { hasText: text }).waitFor({ timeout: 5000 });
     assert.strictEqual(await pageB.inputValue('#chat-body'), '', 'zone de saisie vidée après envoi');
+    await page.waitForTimeout(800);
+    assert.ok(reads.length > 0 && reads.every(d => d.includes('active=0')), 'accusé de lecture passif sans interaction : ' + reads.join(' | '));
+    // Envoi sans réponse puis rechargement : le texte revient dans la zone de saisie.
+    await pageB.route('**/messages', r => r.abort());
+    await pageB.fill('#chat-body', 'Perdu ? ' + text);
+    await pageB.keyboard.press('Enter');
+    await pageB.locator('.kb-msg-retry').waitFor({ timeout: 5000 });
+    await pageB.unroute('**/messages');
+    await pageB.reload();
+    assert.strictEqual(await pageB.inputValue('#chat-body'), 'Perdu ? ' + text, 'texte non confirmé retrouvé après rechargement');
+    // Session expirée : message clair, texte conservé.
+    await other.clearCookies();
+    await pageB.locator('.kb-chat-send').click();
+    await pageB.locator('[data-chat-expired]').waitFor({ timeout: 5000 });
+    assert.strictEqual(await pageB.inputValue('#chat-body'), 'Perdu ? ' + text, 'texte conservé quand la session a expiré');
     await page.fill('#chat-body', 'Brouillon ' + text);
     await page.reload();
     assert.strictEqual(await page.inputValue('#chat-body'), 'Brouillon ' + text, 'brouillon retrouvé après rechargement');

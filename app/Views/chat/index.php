@@ -75,7 +75,7 @@ $me = (int) $currentUser['id'];
                             <?= csrf_field() ?>
                             <label class="form-label" for="group-name">Nom du groupe</label>
                             <div class="d-flex gap-2">
-                                <input class="form-control" id="group-name" name="name" value="<?= e($conversation['name']) ?>" maxlength="100" required>
+                                <input class="form-control" id="group-name" name="name" value="<?= e($conversation['name']) ?>" maxlength="80" required>
                                 <button class="btn btn-outline-primary" type="submit">Renommer</button>
                             </div>
                         </form>

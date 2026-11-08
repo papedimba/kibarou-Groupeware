@@ -97,8 +97,9 @@ Le mutualisé interdit les processus permanents : la messagerie utilise du **pol
   `POST /api/chat/conversations/{id}/messages` (JSON, en-tête `X-CSRF-Token`), `POST /api/chat/conversations/{id}/read`.
 - Session : les `GET /api/*` et l'accusé de lecture sans `active=1` sont **passifs** (ne prolongent pas la session) ;
   envoyer un message est une activité.
-- `public/assets/js/chat.js` : objet `transport` (`poll` seul en 4a), rythme `chat.poll` (3 s actif, 10 s au repos,
-  30 s onglet caché), rendu par `textContent` (seuls les liens `http(s)` deviennent cliquables), brouillons en
+- `public/assets/js/chat.js` : objet `transport` (`poll` seul en 4a), rythme `chat.poll` (3 s conversation ouverte et
+  interaction dans la minute, 10 s après 1 min, 30 s après 5 min ou sur la seule liste, arrêt onglet caché ; un défilement
+  automatique ne compte pas comme interaction), recouvrement de 20 évènements à chaque interrogation (dédoublonnés), rendu par `textContent` (seuls les liens `http(s)` deviennent cliquables), brouillons en
   `localStorage`, bulle « Non envoyé — Réessayer » en cas d'échec réseau. Sans JavaScript, la page reste utilisable
   (envoi par formulaire classique).
 - Reporté aux lots 4b/4c : salons et salons de service, pièces jointes, réactions, réponses, modification et suppression,

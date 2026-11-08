@@ -215,7 +215,7 @@ final class ChatService
         $name = $this->validName($name);
         $this->db->transaction(function () use ($me, $cid, $name) {
             $this->db->update('conversations', ['name' => $name], ['id' => $cid]);
-            $this->event($cid, 'renamed', $me);
+            $this->event($cid, 'renamed', $me, null, null, $name);
         });
     }
 
@@ -226,11 +226,11 @@ final class ChatService
     }
 
     /** Ajoute un évènement et met à jour la date de dernière activité de la conversation. */
-    private function event(int $conversationId, string $type, ?int $actorId, ?int $targetId = null, ?int $messageId = null): int
+    private function event(int $conversationId, string $type, ?int $actorId, ?int $targetId = null, ?int $messageId = null, ?string $detail = null): int
     {
         $id = $this->db->insert('chat_events', [
             'conversation_id' => $conversationId, 'type' => $type, 'message_id' => $messageId,
-            'actor_id' => $actorId, 'target_user_id' => $targetId, 'created_at' => now_utc(),
+            'actor_id' => $actorId, 'target_user_id' => $targetId, 'detail' => $detail, 'created_at' => now_utc(),
         ]);
         $this->db->run('UPDATE conversations SET last_event_at = UTC_TIMESTAMP() WHERE id = ?', [$conversationId]);
         return $id;

@@ -23,7 +23,7 @@ final class ChatRepository
         );
     }
 
-    private const EVENT_COLUMNS = "e.id, e.conversation_id, e.type, e.created_at, e.actor_id, e.target_user_id,
+    private const EVENT_COLUMNS = "e.id, e.conversation_id, e.type, e.created_at, e.actor_id, e.target_user_id, e.detail,
         m.sender_id, m.body, CONCAT(a.first_name, ' ', a.last_name) AS actor_name, CONCAT(t.first_name, ' ', t.last_name) AS target_name";
 
     private const EVENT_JOINS = "LEFT JOIN messages m ON m.id = e.message_id
@@ -71,7 +71,7 @@ final class ChatRepository
      * Mes conversations actives, la plus récemment active d'abord.
      * @return list<array<string,mixed>>
      */
-    public function conversationsFor(int $userId): array
+    public function conversationsFor(int $userId, int $openId = 0): array
     {
         $rows = $this->db->fetchAll(
             "SELECT c.id, c.type, c.name, c.last_event_at, " . self::UNREAD . " AS unread,
@@ -83,8 +83,11 @@ final class ChatRepository
              LEFT JOIN conversation_members om ON c.type = 'direct' AND om.conversation_id = c.id AND om.user_id <> cm.user_id
              LEFT JOIN users o ON o.id = om.user_id
              WHERE cm.user_id = ? AND cm.left_at IS NULL
+               -- Une conversation privée ouverte sans message n'apparaît que chez celui qui l'a ouverte.
+               AND (c.type = 'group' OR c.created_by = cm.user_id OR c.id = ?
+                    OR EXISTS (SELECT 1 FROM chat_events x WHERE x.conversation_id = c.id AND x.type = 'message'))
              ORDER BY c.last_event_at DESC, c.id DESC",
-            [$userId],
+            [$userId, $openId],
         );
         return array_map(static function ($r) {
             $r['unread'] = (int) $r['unread'];

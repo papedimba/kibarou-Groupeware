@@ -8,8 +8,8 @@ $currentId = $conversation !== null ? (int) $conversation['id'] : 0;
 </div>
 <?php if ($conversations === []): ?>
     <p class="kb-chat-empty">Aucune conversation pour l'instant.<br>Écrivez à un collègue depuis l'annuaire ou créez un groupe.</p>
-<?php else: ?>
-    <ul class="kb-chat-list" data-chat-list>
+<?php endif; ?>
+    <ul class="kb-chat-list" data-chat-list<?= $conversations === [] ? ' hidden' : '' ?>>
         <?php foreach ($conversations as $c): ?>
             <?php $unread = (int) $c['unread']; $active = (int) $c['id'] === $currentId; ?>
             <li>
@@ -31,4 +31,3 @@ $currentId = $conversation !== null ? (int) $conversation['id'] : 0;
             </li>
         <?php endforeach; ?>
     </ul>
-<?php endif; ?>

@@ -7,7 +7,7 @@ if ($ev['type'] !== 'message'):
     $text = match ($ev['type']) {
         'member_added' => (int) $ev['target_user_id'] === $me ? $ev['actor_name'] . ' vous a ajouté' : $actor . ' ajouté ' . $ev['target_name'],
         'member_left' => $actor . ' quitté le groupe',
-        'renamed' => $actor . ' renommé le groupe',
+        'renamed' => $actor . ' renommé le groupe en « ' . $ev['detail'] . ' »',
         default => '',
     };
 ?>
