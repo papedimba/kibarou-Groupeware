@@ -89,4 +89,48 @@ final class ChatPagesTest extends IntegrationTestCase
         $this->login('a@kibarou.test', 'Motdepasse123');
         $this->assertMatchesRegularExpression('/data-chat-badge[^>]*>2</', $this->get('/')->body);
     }
+
+    public function testMessageWithPhotoFileReplyReactionRendered(): void
+    {
+        $a = $this->createUser('a@kibarou.test');
+        $b = $this->createUser('b@kibarou.test');
+        $cid = $this->app->chat()->directWith($this->u($a), $b);
+        $img = imagecreatetruecolor(200, 100);
+        $jpg = tempnam(sys_get_temp_dir(), 'kbp');
+        imagejpeg($img, $jpg);
+        $photo = $this->app->chat()->uploadAttachment($this->u($b), $cid, ['name' => 'p.jpg', 'tmp_name' => $jpg, 'error' => UPLOAD_ERR_OK, 'size' => filesize($jpg)]);
+        $pdf = tempnam(sys_get_temp_dir(), 'kbf');
+        file_put_contents($pdf, "%PDF-1.4\n" . str_repeat('x', 2048) . "\n%%EOF\n");
+        $file = $this->app->chat()->uploadAttachment($this->u($b), $cid, ['name' => 'Plan RDC.pdf', 'tmp_name' => $pdf, 'error' => UPLOAD_ERR_OK, 'size' => filesize($pdf)]);
+        $orig = $this->app->chat()->send($this->u($a), $cid, 'Envoie-moi le plan du RDC');
+        $m = $this->app->chat()->send($this->u($b), $cid, 'Voici', null, [$photo['id'], $file['id']], $orig['message_id']);
+        $this->app->chat()->edit($this->u($b), $m['message_id'], 'Voici le plan');
+        $this->app->chat()->react($this->u($a), $m['message_id'], '👍');
+        $this->login('a@kibarou.test', 'Motdepasse123');
+        $body = $this->get("/chat/$cid")->body;
+        $this->assertStringContainsString('/chat/attachments/' . $photo['id'] . '/thumb', $body);
+        $this->assertStringContainsString('alt="Photo envoyée par Test B"', $body);
+        $this->assertStringContainsString('Plan RDC.pdf', $body);
+        $this->assertStringContainsString('2 Ko', $body);
+        $this->assertStringContainsString('href="/chat/attachments/' . $file['id'] . '"', $body);
+        $this->assertStringContainsString('Envoie-moi le plan du RDC', $body);
+        $this->assertMatchesRegularExpression('/class="kb-msg-reply"[^>]*data-reply-to="' . $orig['message_id'] . '"/', $body);
+        $this->assertStringContainsString('modifié', $body);
+        $this->assertMatchesRegularExpression('/data-react="👍"[^>]*aria-pressed="true"/u', $body);
+        $this->assertStringContainsString('data-message-id="' . $m['message_id'] . '"', $body);
+    }
+
+    public function testDeletedMessageShowsPlaceholderOnly(): void
+    {
+        $a = $this->createUser('a@kibarou.test');
+        $b = $this->createUser('b@kibarou.test');
+        $cid = $this->app->chat()->directWith($this->u($a), $b);
+        $m = $this->app->chat()->send($this->u($b), $cid, 'Texte à retirer');
+        $this->app->chat()->delete($this->u($b), $m['message_id']);
+        $this->login('a@kibarou.test', 'Motdepasse123');
+        $body = $this->get("/chat/$cid")->body;
+        $this->assertStringContainsString('Message supprimé', $body);
+        $this->assertStringNotContainsString('Texte à retirer', $body);
+        $this->assertMatchesRegularExpression('/data-deleted="1"/', $body);
+    }
 }

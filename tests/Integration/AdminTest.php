@@ -175,6 +175,23 @@ final class AdminTest extends IntegrationTestCase
         $this->assertStringContainsString('CRON', $body);
     }
 
+    public function testDashboardShowsChatStorageAndWarnsAboveThreshold(): void
+    {
+        $a = $this->createUser('admin@kibarou.test', ['admin']);
+        $b = $this->createUser('b@kibarou.test');
+        $cid = $this->app->chat()->directWith($this->app->db()->fetch('SELECT * FROM users WHERE id = ?', [$a]), $b);
+        $row = ['conversation_id' => $cid, 'uploader_id' => $a, 'kind' => 'file', 'original_name' => 'x.pdf', 'mime' => 'application/pdf', 'created_at' => now_utc()];
+        $this->app->db()->insert('chat_attachments', $row + ['stored_path' => 'chat/2026/11/' . str_repeat('a', 32) . '.bin', 'size' => 1572864]);
+        $this->login('admin@kibarou.test', 'Motdepasse123');
+        $body = $this->get('/admin')->body;
+        $this->assertStringContainsString('1,5 Mo', $body);
+        $this->assertStringContainsString('Pièces jointes de la messagerie', $body);
+        $this->assertStringNotContainsString('approche de la limite', $body);
+        // Au-delà du seuil (2 000 Mo par défaut) : alerte.
+        $this->app->db()->insert('chat_attachments', $row + ['stored_path' => 'chat/2026/11/' . str_repeat('b', 32) . '.bin', 'size' => 2_200_000_000]);
+        $this->assertStringContainsString('approche de la limite', $this->get('/admin')->body);
+    }
+
     public function testAllAdminPagesRenderForSuperAdmin(): void
     {
         $id = $this->createUser('super@kibarou.test', ['super_admin']);

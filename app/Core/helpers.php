@@ -156,6 +156,19 @@ function day_label(string $utc): string
     };
 }
 
+/** Taille lisible : « 840 octets », « 240 Ko », « 1,5 Mo », « 2,1 Go ». */
+function format_bytes(int $bytes): string
+{
+    if ($bytes < 1024) {
+        return $bytes . ' octets';
+    }
+    if ($bytes < 1024 * 1024) {
+        return (int) round($bytes / 1024) . ' Ko';
+    }
+    [$value, $unit] = $bytes < 1024 ** 3 ? [$bytes / 1024 ** 2, 'Mo'] : [$bytes / 1024 ** 3, 'Go'];
+    return str_replace('.', ',', rtrim(rtrim(number_format($value, 1, '.', ''), '0'), '.')) . ' ' . $unit;
+}
+
 /** Date courante UTC au format SQL. */
 function now_utc(): string
 {

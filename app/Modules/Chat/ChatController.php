@@ -236,7 +236,7 @@ final class ChatController extends Controller
             'poll' => (array) $this->app->config('chat.poll'), 'since' => (int) $this->app->db()->value('SELECT COALESCE(MAX(id), 0) FROM chat_events')];
         if ($cid !== null) {
             $membership = $this->app->chat()->requireMember($me, $cid);
-            $events = $repo->history($me, $cid, null);
+            $events = $repo->hydrate($me, $repo->history($me, $cid, null));
             if ($events !== []) {
                 $this->app->chat()->markRead($this->user(), $cid, (int) end($events)['id']);
             }

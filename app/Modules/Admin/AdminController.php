@@ -22,13 +22,15 @@ final class AdminController extends Controller
                 (SELECT COUNT(DISTINCT user_id) FROM sessions WHERE user_id IS NOT NULL AND last_activity_at > UTC_TIMESTAMP() - INTERVAL 15 MINUTE) AS online_users,
                 (SELECT COUNT(*) FROM login_attempts WHERE success = 0 AND created_at > UTC_TIMESTAMP() - INTERVAL 24 HOUR) AS failed_logins_24h,
                 (SELECT COUNT(*) FROM mail_queue WHERE status = 'failed') AS failed_mails,
-                (SELECT COUNT(*) FROM mail_queue WHERE status = 'pending') AS pending_mails",
+                (SELECT COUNT(*) FROM mail_queue WHERE status = 'pending') AS pending_mails,
+                (SELECT COALESCE(SUM(size), 0) FROM chat_attachments) AS chat_storage",
         );
         $cronLast = $db->value("SELECT `value` FROM settings WHERE `key` = 'cron_last_run'");
         return $this->view('admin/dashboard', [
             'currentPath' => '/admin',
             'stats' => $stats,
             'cronLast' => $cronLast,
+            'chatStorageWarn' => (int) $stats['chat_storage'] > (int) $this->app->config('chat.storage_warn_mb', 2000) * 1024 * 1024,
             'recent' => can('audit.view') ? $this->auditRows(1, 10, [])->items : [],
         ]);
     }

@@ -53,6 +53,8 @@ return [
             'idle_ms' => (int) Env::get('CHAT_POLL_IDLE_MS', 10000),
             'background_ms' => (int) Env::get('CHAT_POLL_BACKGROUND_MS', 30000),
         ],
+        // Alerte de l'administration quand les pièces jointes dépassent ce volume (Mo).
+        'storage_warn_mb' => (int) Env::get('CHAT_STORAGE_WARN_MB', 2000),
     ],
     'retention' => [
         'login_attempts_days' => 90,
