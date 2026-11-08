@@ -146,7 +146,7 @@ async function minBorderContrast(p, selector) {
   await page.click('button:has-text("Lien de réinitialisation")');
   await dialog.waitFor({ state: 'visible' });
   // La confirmation ne vaut qu'une fois (retour arrière depuis le cache du navigateur).
-  await page.route('**/reset-link', r => setTimeout(() => r.continue(), 800));
+  await page.route('**/reset-link', r => setTimeout(() => r.continue(), 3000));
   await dialog.locator('[data-kb-confirm-ok]').click({ noWaitAfter: true });
   assert.strictEqual(await page.evaluate(() => document.querySelector('form[action$="/reset-link"]').dataset.confirmed), undefined, 'confirmation consommée');
   await page.waitForNavigation();
