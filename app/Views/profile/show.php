@@ -6,6 +6,7 @@ $this->layout('layouts/app', ['title' => 'Mon profil', 'breadcrumbs' => [['Mon p
     <h1>Mon profil</h1>
     <div class="d-flex flex-wrap gap-2">
         <a class="btn btn-outline-secondary" href="<?= e(url('/profile/notifications')) ?>"><i data-lucide="bell" aria-hidden="true"></i> Notifications</a>
+        <?php if (can('calendar.use')): ?><a class="btn btn-outline-secondary" href="<?= e(url('/profile/calendar')) ?>"><i data-lucide="calendar-plus" aria-hidden="true"></i> Agenda sur mon téléphone</a><?php endif; ?>
         <a class="btn btn-outline-primary" href="<?= e(url('/profile/password')) ?>"><i data-lucide="lock" aria-hidden="true"></i> Changer mon mot de passe</a>
     </div>
 </div>

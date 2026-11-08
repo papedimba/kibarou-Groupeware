@@ -8,6 +8,7 @@ use App\Modules\Auth\AuthController;
 use App\Modules\Dashboard\DashboardController;
 use App\Modules\Calendar\CalendarController;
 use App\Modules\Calendar\EventController;
+use App\Modules\Calendar\FeedController;
 use App\Modules\Chat\ChannelController;
 use App\Modules\Chat\ChatController;
 use App\Modules\Directory\DirectoryController;
@@ -32,6 +33,9 @@ return static function (Router $r): void {
         $r->get('/password/reset/{token:token}', [AuthController::class, 'showReset']);
         $r->post('/password/reset/{token:token}', [AuthController::class, 'reset']);
     });
+
+    // Abonnement iCalendar : authentifié par le jeton secret, sans session (applications d'agenda).
+    $r->get('/calendar/feed/{token:token}.ics', [FeedController::class, 'feed']);
 
     $r->group(['auth'], static function (Router $r) {
         $r->post('/logout', [AuthController::class, 'logout']);
@@ -66,6 +70,9 @@ return static function (Router $r): void {
         $r->group(['perm:calendar.use'], static function (Router $r) {
             $r->get('/calendar', [CalendarController::class, 'index']);
             $r->get('/calendar/availability', [CalendarController::class, 'availability']);
+            $r->get('/calendar/events/{id}.ics', [FeedController::class, 'download']);
+            $r->get('/profile/calendar', [FeedController::class, 'settings']);
+            $r->post('/profile/calendar/feed', [FeedController::class, 'generate']);
             $r->get('/calendar/events/new', [EventController::class, 'newForm']);
             $r->post('/calendar/events', [EventController::class, 'create']);
             $r->get('/calendar/events/{id}', [EventController::class, 'show']);

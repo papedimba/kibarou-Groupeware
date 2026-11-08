@@ -11,8 +11,9 @@ $cancelled = $event['status'] === 'cancelled';
         <h1><?= e($event['title']) ?></h1>
         <p class="text-secondary m-0"><?= e($when) ?><?= $endLabel ? ' – ' . e($endLabel) : '' ?><?= $event['location'] ? ' · ' . e($event['location']) : '' ?><?= (int) $event['is_private'] === 1 ? ' · Privé' : '' ?></p>
     </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-light" href="<?= e(url("/calendar/events/$id.ics")) ?>"><i data-lucide="download" aria-hidden="true"></i> Ajouter à mon agenda (.ics)</a>
     <?php if ($mine && !$cancelled): ?>
-        <div class="d-flex flex-wrap gap-2">
             <a class="btn btn-outline-primary" href="<?= e(url("/calendar/events/$id/edit")) ?>">Modifier</a>
             <form method="post" action="<?= e(url("/calendar/events/$id/cancel")) ?>" data-confirm="Annuler « <?= e($event['title']) ?> »<?= $event['series_id'] ? ' (cette fois seulement)' : '' ?> ? Les participants seront prévenus." data-confirm-action="Annuler" data-confirm-danger>
                 <?= csrf_field() ?><button class="btn btn-outline-danger" type="submit"><?= $event['series_id'] ? 'Annuler cette fois' : 'Annuler l\'évènement' ?></button>
@@ -22,8 +23,8 @@ $cancelled = $event['status'] === 'cancelled';
                     <?= csrf_field() ?><input type="hidden" name="scope" value="following"><button class="btn btn-outline-danger" type="submit">Annuler celle-ci et les suivantes</button>
                 </form>
             <?php endif; ?>
-        </div>
     <?php endif; ?>
+    </div>
 </div>
 <?php if ($cancelled): ?><div class="alert alert-warning" role="status">Cet évènement est annulé.</div><?php endif; ?>
 <div class="row g-4">
