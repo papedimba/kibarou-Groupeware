@@ -13,7 +13,12 @@ use App\Services\AuditLogger;
 /** Services (départements) et fonctions (postes). */
 final class OrganizationService
 {
-    public function __construct(private readonly Database $db, private readonly AuditLogger $audit)
+    public function __construct(
+        private readonly Database $db,
+        private readonly AuditLogger $audit,
+        // Salons de service tenus à jour après chaque modification de service (absent : cron:run s'en charge).
+        private readonly ?\App\Modules\Chat\ChannelService $channels = null,
+    )
     {
     }
 
@@ -68,7 +73,9 @@ final class OrganizationService
         if ($data['manager_user_id'] !== null && $this->db->value('SELECT 1 FROM users WHERE id = ? AND deleted_at IS NULL', [$data['manager_user_id']]) === null) {
             throw new ValidationException(['manager_user_id' => 'Responsable inexistant.']);
         }
-        return $this->persist('departments', 'department', $id, $data, $actor);
+        $saved = $this->persist('departments', 'department', $id, $data, $actor);
+        $this->channels?->syncDepartments();
+        return $saved;
     }
 
     /** @return list<array<string,mixed>> */

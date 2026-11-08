@@ -153,6 +153,62 @@ final class ChannelService
         $this->db->run('UPDATE conversation_members SET notify = ? WHERE conversation_id = ? AND user_id = ?', [$on ? 1 : 0, $cid, (int) $actor['id']]);
     }
 
+    /**
+     * Rapproche les salons de service de l'annuaire : un salon par service, nom et état du service,
+     * membres = comptes actifs du service ayant accès à la messagerie. Idempotente ; ni audit ni notification.
+     * Appelée après chaque modification de compte ou de service, et par cron:run (filet de sécurité).
+     * @return array{created:int, added:int, removed:int}
+     */
+    public function syncDepartments(): array
+    {
+        $count = ['created' => 0, 'added' => 0, 'removed' => 0];
+        $salons = array_column($this->db->fetchAll("SELECT * FROM conversations WHERE type = 'department' AND department_id IS NOT NULL"), null, 'department_id');
+        foreach ($this->db->fetchAll('SELECT id, name, is_active FROM departments ORDER BY id') as $d) {
+            $salon = $salons[$d['id']] ?? null;
+            if ($salon === null && !(int) $d['is_active']) {
+                continue;
+            }
+            $this->db->transaction(function () use ($d, $salon, &$count) {
+                if ($salon === null) {
+                    $cid = $this->db->insert('conversations', ['type' => 'department', 'name' => $d['name'], 'department_id' => $d['id'],
+                        'created_at' => now_utc(), 'last_event_at' => now_utc()]);
+                    $this->chat->event($cid, 'created', null);
+                    $salon = ['id' => $cid, 'name' => $d['name'], 'archived_at' => null];
+                    $count['created']++;
+                }
+                $cid = (int) $salon['id'];
+                if ($salon['name'] !== $d['name']) {
+                    $this->db->update('conversations', ['name' => $d['name']], ['id' => $cid]);
+                    $this->chat->event($cid, 'renamed', null, null, null, $d['name']);
+                }
+                if ((int) $d['is_active'] === ($salon['archived_at'] !== null ? 1 : 0)) {
+                    $this->setArchived($cid, !(int) $d['is_active'], null);
+                }
+                $expected = array_map('intval', array_column($this->db->fetchAll(
+                    "SELECT u.id FROM users u WHERE u.department_id = ? AND u.status = 'active' AND u.deleted_at IS NULL
+                       AND EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
+                                   LEFT JOIN role_permissions rp ON rp.role_id = r.id LEFT JOIN permissions p ON p.id = rp.permission_id
+                                   WHERE ur.user_id = u.id AND (r.slug = 'super_admin' OR p.slug = 'chat.use'))",
+                    [$d['id']],
+                ), 'id'));
+                $current = array_map('intval', array_column($this->db->fetchAll(
+                    'SELECT user_id FROM conversation_members WHERE conversation_id = ? AND left_at IS NULL',
+                    [$cid],
+                ), 'user_id'));
+                foreach (array_diff($expected, $current) as $uid) {
+                    $this->enter($cid, $uid, $this->chat->event($cid, 'member_added', null, $uid));
+                    $count['added']++;
+                }
+                foreach (array_diff($current, $expected) as $uid) {
+                    $this->chat->event($cid, 'member_left', null, $uid);
+                    $this->db->run('UPDATE conversation_members SET left_at = UTC_TIMESTAMP() WHERE conversation_id = ? AND user_id = ?', [$cid, $uid]);
+                    $count['removed']++;
+                }
+            });
+        }
+        return $count;
+    }
+
     /** Arrivée dans un salon : tout l'historique, mais rien de non lu (position = $eventId). */
     private function enter(int $cid, int $userId, int $eventId): void
     {

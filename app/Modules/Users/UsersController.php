@@ -182,7 +182,7 @@ final class UsersController extends Controller
 
     private function org(): OrganizationService
     {
-        return new OrganizationService($this->app->db(), $this->app->audit());
+        return new OrganizationService($this->app->db(), $this->app->audit(), $this->app->channels());
     }
 
     private function service(): UserService
@@ -196,6 +196,7 @@ final class UsersController extends Controller
             (int) $this->app->config('auth.password_min_length'),
             (string) $this->app->config('app.url'),
             $this->app->notifier(),
+            $this->app->channels(),
         );
     }
 }

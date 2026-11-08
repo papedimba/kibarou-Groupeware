@@ -74,6 +74,6 @@ final class OrganizationController extends Controller
 
     private function service(): OrganizationService
     {
-        return new OrganizationService($this->app->db(), $this->app->audit());
+        return new OrganizationService($this->app->db(), $this->app->audit(), $this->app->channels());
     }
 }

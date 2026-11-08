@@ -46,6 +46,8 @@ final class UserService
         private readonly int $passwordMinLength,
         private readonly string $appUrl,
         private readonly Notifier $notifier,
+        // Salons de service tenus à jour après chaque modification (absent : cron:run s'en charge).
+        private readonly ?\App\Modules\Chat\ChannelService $channels = null,
     ) {
     }
 
@@ -84,6 +86,7 @@ final class UserService
             return $id;
         });
         $this->rbac->flush();
+        $this->channels?->syncDepartments();
         return $id;
     }
 
@@ -125,6 +128,7 @@ final class UserService
             }
         });
         $this->rbac->flush();
+        $this->channels?->syncDepartments();
     }
 
     /** @param array<string,mixed> $actor */
@@ -150,6 +154,7 @@ final class UserService
         if ($active && $target['status'] === 'disabled') {
             $this->notifier->notify($id, 'account.enabled', 'Votre compte a été réactivé', '/');
         }
+        $this->channels?->syncDepartments();
     }
 
     /** Envoie un lien de réinitialisation à l'utilisateur (action d'administrateur). @param array<string,mixed> $actor */
