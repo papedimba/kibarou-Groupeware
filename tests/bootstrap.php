@@ -32,3 +32,7 @@ foreach ($pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN) as $table) {
 }
 $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
 (new Migrator($app->db(), $app->config('paths.migrations')))->migrate();
+// Les identifiants repartent de 1 à chaque lancement : on vide les photos de test du lancement précédent.
+foreach (glob($app->config('paths.storage') . '/private/avatars/*.webp') ?: [] as $file) {
+    unlink($file);
+}
