@@ -45,7 +45,8 @@ Légende : ✅ terminé et testé · 🔜 prochain · ⏳ planifié
 | 4a. Messagerie : privé et groupes | Conversations privées, groupes, non-lus, interrogation adaptative, brouillons, envoi sans JavaScript | ✅ |
 | 4b. Messagerie : le confort | Pièces jointes (photos réduites, .docx, .xlsx, PDF), réponses citées, réactions, modification et suppression sous 15 minutes, envoi sans doublon | ✅ |
 | 4c. Messagerie : l'organisation | Salons, salons de service, alertes par conversation, accusés de lecture, recherche (indicateur de saisie reporté au lot 10) | ✅ |
-| 5. Calendrier + réunions | Événements, participants, invitations, rappels CRON, récurrence (RRULE simplifiée), export ICS ; convocations, ordre du jour, comptes rendus, décisions, actions | ⏳ |
+| 5a. Calendrier | Agenda personnel (semaine, mois, liste), invitations et réponses, rappels, séries, disponibilités, export et abonnement iCalendar | ✅ |
+| 5b. Réunions | Convocations, ordre du jour, comptes rendus, décisions, actions (reliées aux tâches au lot 6) | 🔜 |
 | 6. Tâches + projets | Tâches, Kanban, commentaires, pièces jointes, historique ; projets, membres, jalons, progression | ⏳ |
 | 7. Documents | Dossiers, versions, permissions, corbeille, téléchargement sécurisé, recherche | ⏳ |
 | 8. Annonces | Ciblage par service, publication différée, expiration, accusés de lecture | ⏳ |
@@ -111,3 +112,10 @@ Ordre justifié : l'annuaire et les notifications sont des dépendances de la me
 - Tests : 226 PHPUnit ; test de fumée Playwright à deux comptes (rejoindre un salon et lire l’historique, recherche, « Vu ») ; régressions de la messagerie.
 - Décision : pas d'indicateur « en train d'écrire » (reporté au lot 10, avec un éventuel service temps réel).
 - Après mise en production : lancer `php bin/console cron:run` une fois pour créer les salons de service.
+
+### Lot 5a — Calendrier — 08/11/2026
+- Conception : `docs/superpowers/specs/2026-11-08-calendrier-5a-design.md` ; plan : `docs/superpowers/plans/2026-11-08-lot5a-calendrier.md`.
+- Livré : agenda personnel (semaine, mois, liste) ; évènements avec invitations de personnes ou de services, réponses, notifications sans description ; rappels (alerte navigateur, journée entière à 7 h ou la veille à 18 h) ; séries (jours ouvrés, hebdomadaire, mensuelle ; « cette fois » ou « et les suivantes » ; prolongation) ; disponibilités de dix personnes sans détail ; export .ics et abonnement par lien secret.
+- Décisions : personne n'ouvre l'agenda d'un collègue (seulement les disponibilités) ; congés = statut du jour de l'annuaire ; pas d'agendas d'équipe.
+- Tests : 253 PHPUnit ; test de fumée à deux comptes (invitation, réponse, disponibilités sans détail).
+- À confirmer : fuseau horaire de l'entreprise (`APP_TIMEZONE`, Bamako supposé).

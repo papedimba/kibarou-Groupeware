@@ -69,6 +69,13 @@ d'un utilisateur ferme ses sessions, pour que ses nouveaux droits s'appliquent t
 - Les conversations sont privées : un administrateur ne peut pas les lire. Le journal d'audit enregistre la création des groupes, les ajouts et les départs, jamais le contenu.
 - Un compte désactivé ne peut plus recevoir de messages ; ses messages passés restent visibles des autres membres.
 
+### Calendrier (lot 5a)
+- Menu **Calendrier** : semaine, mois, liste de **mes** évènements ; « Nouvel évènement » (invités, service entier, rappel, répétition, privé).
+- Les invités répondent « J'y serai », « Peut-être » ou « Je n'y serai pas » ; l'organisateur seul modifie ou annule (« cette fois » ou « celle-ci et les suivantes » pour une série). Une série dure un an au plus ; on la prolonge en changeant sa date de fin.
+- **Disponibilités** : jusqu'à dix personnes sur sept jours, « Occupé » et congés, sans le détail des évènements. Personne ne peut ouvrir l'agenda d'un collègue.
+- **Rappels** : par alerte du navigateur (email désactivable ou activable dans *Mon profil › Notifications*) ; ils dépendent de la tâche planifiée.
+- **Agenda sur le téléphone** (*Mon profil › Agenda sur mon téléphone*) : lien secret à coller dans Outlook, Google Agenda ou l'iPhone. En cas de lien perdu ou partagé, en créer un nouveau.
+
 ### Salons et salons de service (lot 4c)
 - **Salons** (*Messagerie › Salons*) : ouverts à toute l'entreprise, typiquement un par chantier ou par thème. Chacun les rejoint ou les quitte librement et lit tout l'historique en arrivant. Les alertes y sont coupées par défaut ; chacun peut les activer par l'interrupteur « Alertes » d'une conversation.
 - **Créer un salon** : administrateurs, directeurs et chefs de service (permission « Gérer les salons »). **Modifier, archiver, rouvrir** : administrateurs et directeurs sur tous les salons ; un chef de service sur ceux qu'il a créés. Un salon archivé reste lisible (et peut être rejoint) mais n'accepte plus de messages ; il n'est jamais supprimé.

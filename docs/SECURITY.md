@@ -54,6 +54,13 @@ l'autorisation à chaque téléchargement (`Content-Disposition: attachment`, `n
 - Limite de 30 messages par minute et par personne (429) ; messages refusés vers un compte désactivé.
 - Notifications et emails sans contenu de message ; audit des actions de groupe sans contenu.
 
+## Calendrier (lot 5a)
+- On ne lit le titre, le lieu ou la description d'un évènement que si l'on y participe (page, export, notifications sans
+  description) ; les autres ne voient qu'« Occupé » dans les disponibilités, et rien pour un évènement privé.
+- Seul l'organisateur modifie ou annule ; chacun ne répond que pour soi.
+- Lien d'abonnement : 32 octets aléatoires, seule l'empreinte est stockée, lien montré une seule fois, régénération qui
+  invalide l'ancien (auditée), 60 requêtes par heure ; il donne accès à l'agenda sans mot de passe (avertissement affiché).
+
 ## Salons, accusés de lecture et recherche (lot 4c)
 - Un salon est ouvert à toute l'entreprise par nature (on le rejoint et on y lit tout l'historique) ; les conversations
   privées et les groupes restent strictement privés.

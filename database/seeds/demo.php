@@ -99,11 +99,11 @@ $db->transaction(function () use ($db, $hash, $now, $app) {
     $zip->addFromString('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Types>');
     $zip->addFromString('xl/workbook.xml', '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"/>');
     $zip->close();
-    $ids = [];
+    $attachmentIds = [];
     foreach ([['Ferraillage bâtiment B.jpg', $photoFile], ['Suivi béton semaine 45.xlsx', $sheetFile]] as [$name, $file]) {
-        $ids[] = (int) $chat->uploadAttachment($u('seydou.coulibaly'), $group, ['name' => $name, 'tmp_name' => $file, 'error' => UPLOAD_ERR_OK, 'size' => filesize($file)])['id'];
+        $attachmentIds[] = (int) $chat->uploadAttachment($u('seydou.coulibaly'), $group, ['name' => $name, 'tmp_name' => $file, 'error' => UPLOAD_ERR_OK, 'size' => filesize($file)])['id'];
     }
-    $chat->send($u('seydou.coulibaly'), $group, 'Ferraillage du bâtiment B terminé, et le suivi béton à jour.', null, $ids, $meeting['message_id']);
+    $chat->send($u('seydou.coulibaly'), $group, 'Ferraillage du bâtiment B terminé, et le suivi béton à jour.', null, $attachmentIds, $meeting['message_id']);
     $last = (int) $db->value('SELECT MAX(id) FROM messages');
     $chat->react($u('moussa.traore'), $last, '👍');
     $chat->react($u('fatou.kone'), $last, '✅');
@@ -117,6 +117,20 @@ $db->transaction(function () use ($db, $hash, $now, $app) {
     $chat->send($u('moussa.traore'), $old, 'La grue est rendue au loueur, salon archivé.');
     $app->channels()->archive($u('moussa.traore'), $old);
     $app->channels()->syncDepartments();
+    // Calendrier : réunion de chantier hebdomadaire (service Travaux), visite d'une journée, rendez-vous privé.
+    $monday = new DateTimeImmutable('monday next week 08:00', new DateTimeZone((string) $app->config('app.timezone')));
+    $app->events()->create($u('moussa.traore'), ['title' => 'Réunion de chantier', 'location' => 'Base vie, Résidence Les Palmiers',
+        'start' => $monday->format('Y-m-d H:i'), 'end' => $monday->modify('+1 hour')->format('Y-m-d H:i'), 'reminder' => '15',
+        'departments' => [(string) $depts['TRV']], 'participants' => [(string) $ids['fatou.kone']],
+        'repeat' => 'weekly', 'weekdays' => ['1'], 'until' => $monday->modify('+12 weeks')->format('Y-m-d')]);
+    $app->events()->create($u('seydou.coulibaly'), ['title' => 'Visite du bureau de contrôle', 'location' => 'Pont de Sotuba', 'all_day' => '1',
+        'start' => $monday->modify('+2 days')->format('Y-m-d'), 'end' => $monday->modify('+2 days')->format('Y-m-d'), 'reminder' => '1440',
+        'participants' => [(string) $ids['moussa.traore']]]);
+    $app->events()->create($u('awa.diallo'), ['title' => 'Rendez-vous banque', 'is_private' => '1',
+        'start' => $monday->modify('+1 day')->setTime(15, 0)->format('Y-m-d H:i'), 'end' => $monday->modify('+1 day')->setTime(16, 0)->format('Y-m-d H:i')]);
+    $db->run("UPDATE notifications SET email_status = 'digested' WHERE type LIKE 'calendar.%'");
+    // Aucun email réel vers les adresses de démonstration (invitations envoyées immédiatement par le calendrier).
+    $db->run("DELETE FROM mail_queue WHERE to_email LIKE '%@demo.kibarou.local'");
     // Aucun email de démonstration : les notifications de messages sont considérées comme traitées.
     $db->run("UPDATE notifications SET email_status = 'digested' WHERE type = 'chat.message'");
 });

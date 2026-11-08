@@ -137,6 +137,21 @@ intervalles sont configurables.
 **Limites du polling** : latence de 3 à 30 s, coût proportionnel au nombre d'onglets ouverts, pas de notification
 quand le navigateur est fermé (les emails de la file prennent le relais).
 
+## 5 ter. Calendrier (lot 5a)
+
+Module `app/Modules/Calendar` (conception : `docs/superpowers/specs/2026-11-08-calendrier-5a-design.md`).
+
+- **Visibilité** : les vues semaine, mois et liste ne montrent que mes évènements ; la page d'un évènement est réservée à ses
+  participants (404 sinon) ; seule la vue « Disponibilités » montre les créneaux d'autres personnes, en « Occupé » sans détail
+  (évènements privés exclus).
+- **Séries** : chaque occurrence est une ligne (`SeriesService` calcule les dates) ; « cette occurrence et les suivantes »
+  décale les lignes en place (heure murale conservée au changement d'heure) ; seule la date de fin d'une série se modifie.
+- **Rappels** : `ReminderService::run()` dans `cron:run` (précision de 5 minutes) ; envoi unique (`reminded_at` réservé
+  avant la notification).
+- **iCalendar** : `IcsWriter` (RFC 5545) pour le `.ics` d'un évènement et l'abonnement `GET /calendar/feed/{jeton}.ics`,
+  hors session, jeton comparé par empreinte.
+- Rendu serveur sans JavaScript ; la grille de la semaine est positionnée par classes CSS (quarts d'heure), sans style en ligne.
+
 ## 5 bis. Notifications (lot 3)
 
 - `Notifier::notify(userId, type, titre, lien, précision, auteur)` : appelée par les modules ; enregistre la notification et, selon la préférence effective, met un email en file (immédiat) ou le réserve au récapitulatif.

@@ -466,10 +466,11 @@ button.kb-msg-seen { min-height: 44px; margin: -.6rem 0; padding: 0 .25rem; text
 .kb-cal-gutter { display: flex; flex-direction: column; }
 .kb-cal-hour { height: 48px; font-size: .7rem; color: var(--kb-gray-500); text-align: right; padding-right: .35rem; transform: translateY(-.45rem); }
 .kb-cal-daycol { position: relative; height: 624px; border-left: 1px solid var(--kb-gray-200);
-    background-image: repeating-linear-gradient(to bottom, var(--kb-gray-200) 0, var(--kb-gray-200) 1px, transparent 1px, transparent 48px); }
+    background-image: linear-gradient(to bottom, var(--kb-gray-200) 1px, transparent 1px); background-size: 100% 48px; }
 .kb-cal-daycol.is-today { background-color: #f8fbff; }
 .kb-cal-daycol .kb-cal-ev { position: absolute; left: 2px; right: 2px; min-height: 22px; }
-.kb-cal-presence { font-size: .75rem; color: #9a3412; background: #fff7ed; border-radius: 6px; padding: .1rem .35rem; }
+.kb-cal-presence { font-size: .75rem; color: var(--kb-gray-500); background: var(--kb-gray-50); border-radius: 6px; padding: .1rem .35rem; }
+.kb-cal-presence.is-off, .kb-avail-off .kb-cal-presence { color: #9a3412; background: #fff7ed; }
 .kb-cal-month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); background: #fff; border: 1px solid var(--kb-gray-200); border-radius: 12px; overflow: hidden; }
 .kb-cal-month-head { padding: .4rem; font-size: .75rem; font-weight: 600; color: var(--kb-gray-500); border-bottom: 1px solid var(--kb-gray-200); }
 .kb-cal-month-day { min-height: 6.5rem; padding: .25rem; border-right: 1px solid var(--kb-gray-200); border-bottom: 1px solid var(--kb-gray-200); display: flex; flex-direction: column; gap: 2px; min-width: 0; }

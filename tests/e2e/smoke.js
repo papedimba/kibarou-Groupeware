@@ -290,6 +290,28 @@ async function minBorderContrast(p, selector) {
     await page.locator('.kb-msg.is-target', { hasText: photoText }).waitFor({ timeout: 8000 });
     await pageB.goto(conversationUrl);
     await page.goto(conversationUrl);
+    // Lot 5a : A invite B, B répond « J'y serai », A voit la réponse ; le créneau apparaît « Occupé » dans les disponibilités.
+    const evTitle = 'Visite smoke ' + Date.now();
+    const evDay = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+    await page.goto(base + '/calendar/events/new');
+    await page.fill('#title', evTitle);
+    await page.fill('#start', evDay + 'T09:00');
+    await page.fill('#end', evDay + 'T10:00');
+    await page.check('#p' + bUserId);
+    await page.click('form.kb-narrow button[type=submit]');
+    await page.waitForURL(/\/calendar\/events\/\d+$/);
+    const evUrl = page.url();
+    await pageB.goto(evUrl);
+    await pageB.check('#resp-yes', { force: true });
+    await pageB.click('form[action$="/respond"] button[type=submit]');
+    await pageB.locator('.alert', { hasText: 'Réponse enregistrée' }).waitFor({ timeout: 8000 });
+    await page.reload();
+    assert.match(await page.locator('.kb-cal-people').innerText(), /J'y serai[\s\S]*J'y serai/, 'réponse de B visible chez A');
+    await page.goto(base + '/calendar/availability?date=' + evDay + '&users[]=' + bUserId);
+    assert.ok(await page.locator('.kb-avail-busy', { hasText: 'Occupé 09:00–10:00' }).count() >= 1, 'créneau occupé sans détail');
+    assert.strictEqual(await page.locator('.kb-avail', { hasText: evTitle }).count(), 0, 'titre absent des disponibilités');
+    await pageB.goto(conversationUrl);
+    await page.goto(conversationUrl);
     // Réponse perdue puis « Réessayer » : un seul message (même client_id).
     const once = 'Une fois ' + Date.now();
     // La 1re requête atteint le serveur mais sa réponse est perdue.

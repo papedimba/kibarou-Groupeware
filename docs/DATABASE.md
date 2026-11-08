@@ -79,6 +79,18 @@ Permissions livrées : `admin.access`, `users.view`, `users.manage`, `organizati
 
 Le contenu des messages n'est jamais copié dans les notifications, les emails ni le journal d'audit.
 
+## Lot 5a : calendrier (migration 0009)
+
+| Table | Rôle |
+|---|---|
+| `events` | Un évènement ou une occurrence de série : titre, lieu, description, horaires en UTC (`start_at`/`end_at`) ou journée entière en dates (`start_date`/`end_date`), `is_private`, rappel par défaut, `status` (confirmé/annulé), `detached` (occurrence modifiée « cette fois seulement ») |
+| `calendar_series` | Règle d'une série (`weekdays`, `weekly` + jours, `monthly`) et date de fin ; chaque occurrence est une ligne de `events` (1 an et 260 occurrences au plus) |
+| `event_participants` | Invité (organisateur compris) : réponse, rappel personnel (`reminder_minutes`, `reminder_custom`), `reminded_at` (rappel envoyé une seule fois) |
+| `calendar_feeds` | Lien d'abonnement iCalendar d'une personne : seule l'empreinte SHA-256 du jeton est conservée |
+| `calendar_feed_hits` | Compteur de la limite de 60 requêtes par heure et par lien |
+
+Permission `calendar.use` (tous les rôles livrés).
+
 ## Lot 4c : salons (migration 0008)
 
 | Table / colonne | Rôle |
@@ -113,8 +125,8 @@ Tables listées dans le cahier des charges, avec les décisions de modélisation
   (chemin privé sous `storage/private`), `message_reactions` (unique message+utilisateur+emoji),
   `message_reads` réservé aux accusés de lecture des groupes (une ligne par message et lecteur, purgée après N jours),
   `user_presence` (dernière activité, saisie en cours), `chat_events` (journal d'événements pour le polling delta).
-- **Calendrier** : `events` (règle de récurrence `rrule`, `calendar_type` personnel/équipe/partagé), `event_participants`
-  (statut d'invitation), `event_reminders` (date d'envoi calculée, traitée par CRON).
+- **Calendrier** : réalisé au lot 5a (voir ci-dessus) ; les agendas d'équipe ou partagés et la règle `rrule` ont été écartés
+  (agendas personnels, occurrences enregistrées).
 - **Réunions** : `meetings` (liée à un `event`), `meeting_agendas`, `meeting_minutes` (compte rendu, décisions) ;
   les actions à réaliser deviennent des `tasks` liées (`meeting_id`) plutôt qu'une table dédiée.
 - **Projets et tâches** : `projects`, `project_members`, `project_milestones`, `tasks` (statut, priorité, échéance,
