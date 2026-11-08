@@ -124,7 +124,7 @@ $me = (int) $currentUser['id'];
                     <?php $d = day_label((string) $ev['created_at']); if ($d !== $day): $day = $d; ?>
                         <li class="kb-msg-day" data-day="<?= e($d) ?>"><span><?= e($d) ?></span></li>
                     <?php endif; ?>
-                    <?= $this->partial('chat/_message', ['ev' => $ev, 'me' => $me, 'isGroup' => $isGroup, 'convType' => $type]) ?>
+                    <?= $this->partial('chat/_message', ['ev' => $ev, 'me' => $me, 'isGroup' => $isGroup, 'convType' => $type, 'seen' => ($seen['event_id'] ?? 0) === (int) $ev['id'] ? $seen : null]) ?>
                 <?php endforeach; ?>
             </ol>
 

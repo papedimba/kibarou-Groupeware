@@ -77,7 +77,7 @@
     // --- Transport (seul l'interrogation existe en 4a ; un autre transport pourra le remplacer) ---
     var transport = {
         poll: function (from) {
-            return fetch(base + 'api/chat/updates?since=' + from, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            return fetch(base + 'api/chat/updates?since=' + from + (cid ? '&open=' + cid : ''), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
                 .then(function (r) {
                     if (r.status === 401 || r.status === 403) { sessionExpired(); throw new Error('stop'); }
                     return r.ok ? r.json() : null;
@@ -103,6 +103,7 @@
                 if (ev.type === 'renamed') { renamed(ev); }
                 updateListItem(ev, data.unread);
             });
+            if (data.reads) { reads = data.reads; renderSeen(); }
             refreshCounts(data.unread);
             if (window.kbSetChatBadge) { window.kbSetChatBadge(data.total_unread); }
         }).catch(function (e) {
@@ -316,6 +317,55 @@
         lastEvent = Math.max(lastEvent, ev.id);
         if (stick) { scrollBottom(); }
         if (fromPoll && !document.hidden) { markRead(); }
+    }
+
+    // --- Accusés de lecture (même règle que ChatRepository::seen) ---
+    var reads = null;
+    function renderSeen() {
+        if (!box || !reads) { return; }
+        var mine = [].filter.call(box.querySelectorAll('.kb-msg[data-mine="1"][data-event-id]'), function (li) { return li.getAttribute('data-deleted') !== '1'; });
+        var readers = function (eventId) {
+            return reads.filter(function (r) { return r.last_read_event_id >= eventId && r.entered_event_id < eventId; });
+        };
+        var target = null, names = [];
+        if (convType === 'direct') {
+            for (var i = mine.length - 1; i >= 0 && !target; i--) {
+                if (readers(parseInt(mine[i].getAttribute('data-event-id'), 10)).length) { target = mine[i]; }
+            }
+        } else if (mine.length) {
+            var last = mine[mine.length - 1];
+            names = readers(parseInt(last.getAttribute('data-event-id'), 10)).map(function (r) { return r.name; });
+            if (names.length) { target = last; }
+        }
+        var current = box.querySelector('[data-seen]');
+        var label = convType === 'direct' ? 'Vu' : 'Vu par ' + names.length;
+        if (current && target && current.closest('.kb-msg') === target && current.textContent.indexOf(label) !== -1) { return; }
+        box.querySelectorAll('[data-seen], .kb-msg-seen-list').forEach(function (n) { n.remove(); });
+        if (!target) { return; }
+        var meta = target.querySelector('.kb-msg-meta'), seen;
+        if (names.length) {
+            seen = el('button', 'kb-msg-seen', '· ' + label);
+            seen.type = 'button'; seen.setAttribute('aria-expanded', 'false'); seen.title = names.join(', ');
+            seen.appendChild(el('span', 'visually-hidden', ' : ' + names.join(', ')));
+        } else {
+            seen = el('span', 'kb-msg-seen', '· ' + label);
+        }
+        seen.setAttribute('data-seen', '');
+        meta.insertBefore(seen, meta.querySelector('[data-msg-actions]'));
+    }
+    // Liste des lecteurs au toucher (groupes et salons).
+    if (box) {
+        box.addEventListener('click', function (e) {
+            var btn = e.target.closest && e.target.closest('button[data-seen]');
+            if (!btn) { return; }
+            var li = btn.closest('.kb-msg'), open = li.querySelector('.kb-msg-seen-list');
+            if (open) { open.remove(); btn.setAttribute('aria-expanded', 'false'); return; }
+            var list = el('ul', 'kb-msg-seen-list');
+            list.setAttribute('aria-label', 'Lu par');
+            btn.title.split(', ').forEach(function (n) { list.appendChild(el('li', '', n)); });
+            li.appendChild(list);
+            btn.setAttribute('aria-expanded', 'true');
+        });
     }
 
     var readTimer = null;

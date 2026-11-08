@@ -430,3 +430,6 @@ body.kb-viewer-open { overflow: hidden; }
     .kb-chat-notify-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 }
 .kb-chat-salon-actions form { margin: 0; display: flex; }
+.kb-msg-seen { font-size: .7rem; color: var(--kb-gray-500); background: none; border: 0; padding: 0; }
+button.kb-msg-seen { min-height: 44px; margin: -.6rem 0; padding: 0 .25rem; text-decoration: underline dotted; text-underline-offset: 2px; }
+.kb-msg-seen-list { list-style: none; margin: .2rem 0 0; padding: .4rem .65rem; background: #fff; border: 1px solid var(--kb-gray-200); border-radius: 8px; font-size: .8rem; }

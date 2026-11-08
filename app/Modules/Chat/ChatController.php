@@ -94,7 +94,10 @@ final class ChatController extends Controller
         $me = (int) $this->user()['id'];
         $repo = new ChatRepository($this->app->db());
         $unread = $repo->unreadByConversation($me);
-        return Response::json([
+        $open = $request->int('open');
+        // Positions de lecture de la conversation ouverte : seulement pour l'un de ses membres actifs.
+        $reads = $open > 0 && $repo->membership($me, $open) !== null ? ['reads' => $repo->reads($open, $me)] : [];
+        return Response::json($reads + [
             'events' => array_map(self::event(...), $repo->hydrate($me, $repo->events($me, max(0, $request->int('since'))))),
             'unread' => (object) array_map('intval', $unread),
             'total_unread' => array_sum($unread),
@@ -260,6 +263,7 @@ final class ChatController extends Controller
             $data['membership'] = $membership;
             $data['events'] = $events;
             $data['members'] = $repo->members($cid);
+            $data['seen'] = ChatRepository::seen($events, $repo->reads($cid, $me), $me, (string) $membership['type']);
             $data['lastEventId'] = $events !== [] ? (int) end($events)['id'] : (int) $membership['joined_event_id'];
             $data['canManage'] = $this->app->channels()->canManage($this->user(), $membership);
             $data['people'] = $membership['type'] === 'group' ? (new UserRepository($this->app->db()))->options() : [];

@@ -54,6 +54,13 @@ if ($ev['type'] !== 'message'):
         <span class="kb-msg-meta">
             <time class="kb-msg-time" datetime="<?= e(str_replace(' ', 'T', (string) $ev['created_at'])) ?>Z"><?= e(format_date((string) $ev['created_at'], 'H:i')) ?></time>
             <?php if (!empty($ev['edited_at']) && !$deleted): ?><span class="kb-msg-edited">modifié</span><?php endif; ?>
+            <?php if (!empty($seen)): ?>
+                <?php if ($seen['names'] === []): ?>
+                    <span class="kb-msg-seen" data-seen>· <?= e($seen['label']) ?></span>
+                <?php else: ?>
+                    <button type="button" class="kb-msg-seen" data-seen aria-expanded="false" title="<?= e(implode(', ', $seen['names'])) ?>">· <?= e($seen['label']) ?><span class="visually-hidden"> : <?= e(implode(', ', $seen['names'])) ?></span></button>
+                <?php endif; ?>
+            <?php endif; ?>
             <button type="button" class="kb-msg-actions-btn" data-msg-actions aria-label="Actions sur ce message" hidden><i data-lucide="ellipsis" aria-hidden="true"></i></button>
         </span>
         <?php if (!empty($ev['reactions'])): ?>

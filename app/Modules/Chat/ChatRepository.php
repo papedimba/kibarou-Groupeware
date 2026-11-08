@@ -230,6 +230,49 @@ final class ChatRepository
         return array_map('array_values', $out);
     }
 
+    /**
+     * Positions de lecture des membres actifs (accusés de lecture), sans le demandeur.
+     * @return list<array{user_id:int,name:string,last_read_event_id:int,entered_event_id:int}>
+     */
+    public function reads(int $cid, int $exceptUserId): array
+    {
+        return array_map(static fn ($r) => ['user_id' => (int) $r['user_id'], 'name' => $r['name'],
+            'last_read_event_id' => (int) $r['last_read_event_id'], 'entered_event_id' => (int) $r['entered_event_id']],
+            $this->db->fetchAll(
+                "SELECT cm.user_id, CONCAT(u.first_name, ' ', u.last_name) AS name, cm.last_read_event_id, cm.entered_event_id
+                 FROM conversation_members cm JOIN users u ON u.id = cm.user_id
+                 WHERE cm.conversation_id = ? AND cm.left_at IS NULL AND cm.user_id <> ? ORDER BY u.last_name, u.first_name",
+                [$cid, $exceptUserId],
+            ));
+    }
+
+    /**
+     * Accusé à afficher (même règle que seenFor() dans chat.js) : lecteurs d'un message E = membres arrivés avant E
+     * dont la position de lecture atteint E. Privé : « Vu » sous mon dernier message lu ; à plusieurs : « Vu par N »
+     * sous mon dernier message seulement.
+     * @param list<array<string,mixed>> $events @param list<array<string,mixed>> $reads
+     * @return array{event_id:int,label:string,names:list<string>}|null
+     */
+    public static function seen(array $events, array $reads, int $me, string $type): ?array
+    {
+        $mine = array_values(array_filter($events, static fn ($e) => $e['type'] === 'message' && (int) $e['sender_id'] === $me && empty($e['deleted_at'])));
+        $readers = static fn (int $eventId) => array_values(array_filter($reads, static fn ($r) => $r['last_read_event_id'] >= $eventId && $r['entered_event_id'] < $eventId));
+        if ($type === 'direct') {
+            foreach (array_reverse($mine) as $e) {
+                if ($readers((int) $e['id']) !== []) {
+                    return ['event_id' => (int) $e['id'], 'label' => 'Vu', 'names' => []];
+                }
+            }
+            return null;
+        }
+        $last = end($mine);
+        if ($last === false) {
+            return null;
+        }
+        $names = array_column($readers((int) $last['id']), 'name');
+        return $names === [] ? null : ['event_id' => (int) $last['id'], 'label' => 'Vu par ' . count($names), 'names' => $names];
+    }
+
     /** @return list<array<string,mixed>> membres actifs */
     public function members(int $conversationId): array
     {

@@ -227,6 +227,11 @@ async function minBorderContrast(p, selector) {
     await pageB.fill('#chat-body', '');
     await pageB.locator('#chat-body').dispatchEvent('input');
     await page.goto(conversationUrl);
+    // Lot 4c : accusé de lecture sans rechargement (B a la conversation ouverte).
+    const seenText = 'Lu ? ' + Date.now();
+    await page.fill('#chat-body', seenText);
+    await page.keyboard.press('Enter');
+    await page.locator('.kb-msg.is-mine', { hasText: seenText }).locator('.kb-msg-seen').waitFor({ timeout: 15000 });
     const bigPhoto = require('path').join(require('os').tmpdir(), 'kb-smoke-photo.jpg');
     execFileSync('php', ['-r', `$i = imagecreatetruecolor(4000, 3000); for ($k = 0; $k < 300; $k++) imagefilledellipse($i, rand(0, 4000), rand(0, 3000), rand(50, 600), rand(50, 600), imagecolorallocate($i, rand(0, 255), rand(0, 255), rand(0, 255))); imagejpeg($i, getenv('KB_PHOTO'), 95);`], { env: { ...process.env, KB_PHOTO: bigPhoto } });
     const originalSize = require('fs').statSync(bigPhoto).size;
