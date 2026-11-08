@@ -11,8 +11,8 @@ return [
         'debug' => (bool) Env::get('APP_DEBUG', false),
         'url' => Env::get('APP_URL', 'https://gw.kibarouconstruction.com'),
         'base_path' => Env::get('APP_BASE_PATH', ''),
-        // Affichage uniquement : tout est stocké en UTC. Fuseau de l'entreprise à confirmer.
-        'timezone' => Env::get('APP_TIMEZONE', 'UTC'),
+        // Affichage uniquement : tout est stocké en UTC. Fuseau de l'entreprise (confirmé) : Abidjan, UTC+0 sans heure d'été.
+        'timezone' => Env::get('APP_TIMEZONE', 'Africa/Abidjan'),
         'install_token' => Env::get('INSTALL_TOKEN'),
     ],
     'db' => [

@@ -119,4 +119,4 @@ Ordre justifié : l'annuaire et les notifications sont des dépendances de la me
 - Décisions : personne n'ouvre l'agenda d'un collègue (seulement les disponibilités) ; congés = statut du jour de l'annuaire ; pas d'agendas d'équipe.
 - Tests : 260 PHPUnit ; test de fumée à deux comptes (invitation, réponse, disponibilités sans détail).
 - Relecture finale indépendante : 5 points importants et 7 mineurs vérifiés ; importants corrigés, mineurs reportés (voir le bilan du lot).
-- À confirmer : fuseau horaire de l'entreprise (`APP_TIMEZONE`, Bamako supposé).
+- Fuseau horaire de l'entreprise confirmé : Abidjan (`APP_TIMEZONE=Africa/Abidjan`, valeur par défaut).

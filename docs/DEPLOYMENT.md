@@ -40,8 +40,8 @@ Copier `.env.example` en `.env` (à la racine du projet, jamais dans `public/`) 
 `APP_URL`, `DB_*`, `MAIL_*`, `APP_TIMEZONE`, et laisser `APP_ENV=production`, `APP_DEBUG=false`, `SESSION_SECURE=true`.
 
 **`APP_TIMEZONE` est indispensable au calendrier** (heures affichées, rappels de 7 h et de 18 h) : fuseau de l'entreprise au
-format IANA, par exemple `Africa/Bamako` (supposé, **à confirmer**), `Africa/Dakar` ou `Africa/Abidjan`. À fixer avant toute
-saisie d'évènement : le changer ensuite décale l'affichage des évènements déjà saisis.
+format IANA : **`Africa/Abidjan`** (confirmé par l'entreprise ; UTC+0 sans heure d'été, valeur par défaut). Le changer après
+des saisies décalerait l'affichage des évènements déjà enregistrés.
 
 Rythme d'interrogation de la messagerie (facultatif, en millisecondes) : `CHAT_POLL_ACTIVE_MS` (3000), `CHAT_POLL_IDLE_MS`
 (10000), `CHAT_POLL_BACKGROUND_MS` (30000). Si Likuid signale une charge trop élevée, augmenter d'abord `CHAT_POLL_IDLE_MS`.
