@@ -74,6 +74,9 @@ return static function (Router $r): void {
             $r->get('/api/chat/conversations/{id}/history', [ChatController::class, 'history']);
             $r->post('/api/chat/conversations/{id}/messages', [ChatController::class, 'apiSend']);
             $r->post('/api/chat/conversations/{id}/read', [ChatController::class, 'read']);
+            $r->post('/api/chat/conversations/{id}/attachments', [ChatController::class, 'upload']);
+            $r->get('/chat/attachments/{id}', [ChatController::class, 'download']);
+            $r->get('/chat/attachments/{id}/thumb', [ChatController::class, 'thumb']);
         });
 
         $r->group(['perm:admin.access'], static function (Router $r) {

@@ -21,6 +21,7 @@ final class ChatService
     public const MAX_LENGTH = 4000;
     private const MAX_PER_MINUTE = 30;
     private const MAX_MEMBERS = 51;
+    private const MAX_FILES_PER_MINUTE = 30;
 
     public function __construct(
         private readonly Database $db,
@@ -28,6 +29,7 @@ final class ChatService
         private readonly Rbac $rbac,
         private readonly AuditLogger $audit,
         private readonly Notifier $notifier,
+        private readonly ChatAttachmentService $attachments,
     ) {
     }
 
@@ -66,15 +68,33 @@ final class ChatService
     }
 
     /**
+     * Envoie un message. $clientId (32 hexadécimaux, créé par le navigateur) rend l'envoi rejouable sans doublon ;
+     * $attachmentIds : pièces déjà envoyées par cet expéditeur dans cette conversation, non rattachées.
      * @param array<string,mixed> $actor
+     * @param list<int|string> $attachmentIds
      * @return array{event_id:int,message_id:int}
      */
-    public function send(array $actor, int $conversationId, string $body): array
+    public function send(array $actor, int $conversationId, string $body, ?string $clientId = null, array $attachmentIds = [], ?int $replyToId = null): array
     {
         $me = (int) $actor['id'];
         $membership = $this->requireMember($me, $conversationId);
+        if ($clientId !== null && $clientId !== '') {
+            if (!preg_match('/^[a-f0-9]{32}$/', $clientId)) {
+                throw new ValidationException(['body' => 'Identifiant de message invalide.']);
+            }
+            $existing = $this->existingByClientId($me, $clientId);
+            if ($existing !== null) {
+                return $existing;
+            }
+        } else {
+            $clientId = null;
+        }
+        $ids = array_values(array_unique(array_map('intval', $attachmentIds)));
+        if (count($ids) > ChatAttachmentService::MAX_PER_MESSAGE) {
+            throw new ValidationException(['attachments' => 'Dix pièces jointes au plus par message.']);
+        }
         $body = rtrim($body);
-        if (trim($body) === '') {
+        if (trim($body) === '' && $ids === []) {
             throw new ValidationException(['body' => 'Le message est vide.']);
         }
         if (mb_strlen($body) > self::MAX_LENGTH) {
@@ -86,17 +106,88 @@ final class ChatService
                 throw new ValidationException(['body' => 'Cette personne ne fait plus partie de l\'intranet : elle ne peut plus recevoir de messages.']);
             }
         }
+        if ($replyToId !== null && $this->repo->visibleMessage($me, $replyToId, $conversationId) === null) {
+            throw new ValidationException(['reply_to' => 'Le message cité est introuvable.']);
+        }
         $recent = (int) $this->db->value('SELECT COUNT(*) FROM messages WHERE sender_id = ? AND created_at > UTC_TIMESTAMP() - INTERVAL 1 MINUTE', [$me]);
         if ($recent >= self::MAX_PER_MINUTE) {
             throw new HttpException(429, 'Trop de messages en peu de temps. Patientez une minute.');
         }
-        $result = $this->db->transaction(function () use ($me, $conversationId, $body) {
-            $messageId = $this->db->insert('messages', ['conversation_id' => $conversationId, 'sender_id' => $me, 'body' => $body, 'created_at' => now_utc()]);
-            $eventId = $this->event($conversationId, 'message', $me, null, $messageId);
-            return ['event_id' => $eventId, 'message_id' => $messageId];
-        });
+        try {
+            $result = $this->db->transaction(function () use ($me, $conversationId, $body, $clientId, $ids, $replyToId) {
+                if ($ids !== []) {
+                    // Verrou : une même pièce ne peut pas être rattachée par deux envois simultanés.
+                    $mine = $this->db->fetchAll(
+                        'SELECT id FROM chat_attachments WHERE id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')
+                         AND uploader_id = ? AND conversation_id = ? AND message_id IS NULL FOR UPDATE',
+                        [...$ids, $me, $conversationId],
+                    );
+                    if (count($mine) !== count($ids)) {
+                        throw new ValidationException(['attachments' => 'Une pièce jointe est introuvable ou déjà envoyée.']);
+                    }
+                }
+                $messageId = $this->db->insert('messages', ['conversation_id' => $conversationId, 'sender_id' => $me, 'body' => $body,
+                    'client_id' => $clientId, 'reply_to_id' => $replyToId, 'created_at' => now_utc()]);
+                if ($ids !== []) {
+                    $this->db->run('UPDATE chat_attachments SET message_id = ? WHERE id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')', [$messageId, ...$ids]);
+                }
+                $eventId = $this->event($conversationId, 'message', $me, null, $messageId);
+                return ['event_id' => $eventId, 'message_id' => $messageId];
+            });
+        } catch (PDOException $e) {
+            // Deux envois simultanés du même client_id : la clé unique a tranché.
+            $existing = $clientId !== null ? $this->existingByClientId($me, $clientId) : null;
+            if ($existing === null) {
+                throw $e;
+            }
+            return $existing;
+        }
         $this->notifyMembers($actor, $membership);
         return $result;
+    }
+
+    /**
+     * Pièce jointe envoyée avant le message (une requête par fichier, sous la limite de l'hébergement).
+     * @param array<string,mixed> $actor @param array<string,mixed> $file
+     * @return array<string,mixed>
+     */
+    public function uploadAttachment(array $actor, int $conversationId, array $file): array
+    {
+        $me = (int) $actor['id'];
+        $this->requireMember($me, $conversationId);
+        $recent = (int) $this->db->value('SELECT COUNT(*) FROM chat_attachments WHERE uploader_id = ? AND created_at > UTC_TIMESTAMP() - INTERVAL 1 MINUTE', [$me]);
+        if ($recent >= self::MAX_FILES_PER_MINUTE) {
+            throw new HttpException(429, 'Trop de fichiers en peu de temps. Patientez une minute.');
+        }
+        return $this->attachments->store($me, $conversationId, $file);
+    }
+
+    /**
+     * Pièce jointe lisible par $userId : membre actif, message visible (postérieur à son arrivée) et non supprimé ;
+     * l'expéditeur voit aussi ses pièces pas encore envoyées (aperçu). Sinon 404.
+     * @return array<string,mixed>
+     */
+    public function attachmentFor(int $userId, int $attachmentId): array
+    {
+        return $this->db->fetch(
+            "SELECT a.* FROM chat_attachments a
+             JOIN conversation_members cm ON cm.conversation_id = a.conversation_id AND cm.user_id = ? AND cm.left_at IS NULL
+             LEFT JOIN messages m ON m.id = a.message_id
+             LEFT JOIN chat_events e ON e.message_id = m.id AND e.type = 'message'
+             WHERE a.id = ? AND ((a.message_id IS NULL AND a.uploader_id = ?) OR (m.deleted_at IS NULL AND e.id > cm.joined_event_id))",
+            [$userId, $attachmentId, $userId],
+        ) ?? throw new HttpException(404);
+    }
+
+    /** @return array{event_id:int,message_id:int}|null */
+    private function existingByClientId(int $senderId, string $clientId): ?array
+    {
+        $row = $this->db->fetch(
+            "SELECT m.id AS message_id, e.id AS event_id FROM messages m JOIN chat_events e ON e.message_id = m.id AND e.type = 'message'
+             WHERE m.sender_id = ? AND m.client_id = ?",
+            [$senderId, $clientId],
+        );
+        return $row !== null ? ['event_id' => (int) $row['event_id'], 'message_id' => (int) $row['message_id']] : null;
     }
 
     /** Marque lu jusqu'à $eventId (jamais à la baisse) et lit les notifications de cette conversation. @param array<string,mixed> $actor */

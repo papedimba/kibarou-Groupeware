@@ -37,3 +37,7 @@ $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
 foreach (glob($app->config('paths.storage') . '/private/avatars/*.webp') ?: [] as $file) {
     unlink($file);
 }
+// Pièces jointes de test du lancement précédent.
+if (is_dir($app->config('paths.storage') . '/private/chat')) {
+    exec('rm -rf ' . escapeshellarg($app->config('paths.storage') . '/private/chat'));
+}

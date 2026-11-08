@@ -87,7 +87,7 @@ final class ChatController extends Controller
         $repo = new ChatRepository($this->app->db());
         $unread = $repo->unreadByConversation($me);
         return Response::json([
-            'events' => array_map(self::event(...), $repo->events($me, max(0, $request->int('since')))),
+            'events' => array_map(self::event(...), $repo->hydrate($me, $repo->events($me, max(0, $request->int('since'))))),
             'unread' => (object) array_map('intval', $unread),
             'total_unread' => array_sum($unread),
         ]);
@@ -99,15 +99,59 @@ final class ChatController extends Controller
         $cid = $this->id($request);
         $this->app->chat()->requireMember($me, $cid);
         $before = $request->int('before');
-        return Response::json(['events' => array_map(self::event(...), (new ChatRepository($this->app->db()))->history($me, $cid, $before > 0 ? $before : null))]);
+        $repo = new ChatRepository($this->app->db());
+        return Response::json(['events' => array_map(self::event(...), $repo->hydrate($me, $repo->history($me, $cid, $before > 0 ? $before : null)))]);
     }
 
     public function apiSend(Request $request): Response
     {
         $cid = $this->id($request);
-        $sent = $this->app->chat()->send($this->user(), $cid, (string) $request->input('body', ''));
-        $row = (new ChatRepository($this->app->db()))->history((int) $this->user()['id'], $cid, $sent['event_id'] + 1, 1);
-        return Response::json(['event' => self::event($row[0])]);
+        $reply = $request->int('reply_to_id');
+        $sent = $this->app->chat()->send($this->user(), $cid, (string) $request->input('body', ''), $request->str('client_id') ?: null,
+            $request->intList('attachment_ids'), $reply > 0 ? $reply : null);
+        $me = (int) $this->user()['id'];
+        $repo = new ChatRepository($this->app->db());
+        return Response::json(['event' => self::event($repo->hydrate($me, $repo->history($me, $cid, $sent['event_id'] + 1, 1))[0])]);
+    }
+
+    /** Une pièce jointe, envoyée avant le message qui la cite. */
+    public function upload(Request $request): Response
+    {
+        $row = $this->app->chat()->uploadAttachment($this->user(), $this->id($request), (array) ($request->files['file'] ?? []));
+        return Response::json(['attachment' => self::attachment(['id' => (int) $row['id'], 'kind' => $row['kind'], 'name' => $row['original_name'],
+            'size' => (int) $row['size'], 'width' => $row['width'], 'height' => $row['height']])]);
+    }
+
+    public function download(Request $request): Response
+    {
+        return $this->serve($request, false);
+    }
+
+    public function thumb(Request $request): Response
+    {
+        return $this->serve($request, true);
+    }
+
+    private function serve(Request $request, bool $thumb): Response
+    {
+        $row = $this->app->chat()->attachmentFor((int) $this->user()['id'], $this->id($request));
+        $path = $this->app->chatAttachments()->absolutePath($thumb ? ($row['thumb_path'] ?? null) : $row['stored_path']);
+        if ($path === null) {
+            throw new HttpException(404);
+        }
+        $response = new Response((string) file_get_contents($path));
+        $response->headers['X-Content-Type-Options'] = 'nosniff';
+        $response->headers['Cache-Control'] = 'private, max-age=86400';
+        if ($row['kind'] === 'image') {
+            $response->headers['Content-Type'] = 'image/webp';
+            return $response;
+        }
+        // Jamais affiché dans le navigateur : toujours téléchargé, sous son nom d'origine.
+        $name = (string) $row['original_name'];
+        $ascii = preg_replace('/[^A-Za-z0-9._ -]/', '_', $name) ?? 'fichier';
+        $response->headers['Content-Type'] = 'application/octet-stream';
+        $response->headers['Content-Disposition'] = 'attachment; filename="' . $ascii . '"; filename*=UTF-8\'\'' . rawurlencode($name);
+        return $response;
     }
 
     /** Accusé de lecture ; passif (ne prolonge pas la session) sauf si active=1 — voir App::handle. */
@@ -131,9 +175,22 @@ final class ChatController extends Controller
             'target_user_id' => $e['target_user_id'] !== null ? (int) $e['target_user_id'] : null,
             'target_name' => $e['target_name'],
             'detail' => $e['detail'],
-            'body' => $e['body'],
+            'message_id' => $e['message_id'] !== null ? (int) $e['message_id'] : null,
+            'body' => !empty($e['deleted_at']) ? '' : $e['body'],
+            'client_id' => $e['client_id'] ?? null,
+            'edited_at' => !empty($e['edited_at']) ? str_replace(' ', 'T', (string) $e['edited_at']) . 'Z' : null,
+            'deleted' => (bool) ($e['deleted'] ?? false),
+            'reply_to' => $e['reply_to'] ?? null,
+            'attachments' => array_map(self::attachment(...), $e['attachments'] ?? []),
+            'reactions' => $e['reactions'] ?? [],
             'created_at' => str_replace(' ', 'T', (string) $e['created_at']) . 'Z',
         ];
+    }
+
+    /** @param array<string,mixed> $a @return array<string,mixed> */
+    private static function attachment(array $a): array
+    {
+        return $a + ['url' => url('/chat/attachments/' . $a['id']), 'thumb_url' => $a['kind'] === 'image' ? url('/chat/attachments/' . $a['id'] . '/thumb') : null];
     }
 
     private function groupAction(Request $request, callable $action, string $done): Response

@@ -135,7 +135,7 @@ final class App
 
     public function chat(): ChatService
     {
-        return $this->service(ChatService::class, fn () => new ChatService($this->db(), new ChatRepository($this->db()), $this->rbac(), $this->audit(), $this->notifier()));
+        return $this->service(ChatService::class, fn () => new ChatService($this->db(), new ChatRepository($this->db()), $this->rbac(), $this->audit(), $this->notifier(), $this->chatAttachments()));
     }
 
     public function chatAttachments(): ChatAttachmentService
