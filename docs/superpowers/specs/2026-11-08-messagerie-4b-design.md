@@ -1,6 +1,6 @@
 # Lot 4b — Messagerie, le confort : conception
 
-Statut : rédigé le 08/11/2026 ; relecture par un constructeur indépendant puis approbation de l'utilisateur.
+Statut : rédigé le 08/11/2026, relu par un constructeur indépendant, complété ; en attente d'approbation.
 Références : conception 4a (`2026-11-08-messagerie-4a-design.md`), code du lot 4a (`app/Modules/Chat`, `public/assets/js/chat.js`), `AvatarService` (lot 2) pour le traitement des images.
 
 ## 1. Intention
@@ -10,7 +10,7 @@ Les équipes bureau et chantier échangent surtout **des photos, des fichiers Wo
 ## 2. Objectifs, non-objectifs, anti-objectifs
 
 **Objectifs**
-- Pièces jointes : photos (JPEG, PNG, WebP), Word (.docx, .doc), Excel (.xlsx, .xls), PDF ; jusqu'à 10 par message ; un message peut ne contenir que des pièces jointes.
+- Pièces jointes : photos (JPEG, PNG, WebP), Word (.docx), Excel (.xlsx), PDF ; jusqu'à 10 par message ; un message peut ne contenir que des pièces jointes.
 - Photos réduites (2 000 px au grand côté) : **seule la version réduite est conservée** (décision de l'utilisateur : « une photo réduite suffit »).
 - Réponse citée, réactions (choix fixe), modification et suppression de ses propres messages **pendant 15 minutes** après l'envoi (décision de l'utilisateur).
 - Envoi fiable sur réseau faible : progression par fichier, reprise d'un seul fichier, aucun doublon même après « Réessayer » (correctif reporté du 4a).
@@ -56,8 +56,9 @@ Modifications, suppressions, réactions et réponses : une seule voie sensée, d
 
 - **Formats** (liste blanche, contrôle sur le contenu réel via `finfo`, jamais sur le type annoncé par le navigateur, et extension cohérente) :
   - images JPEG/PNG/WebP → décodées puis **réencodées en WebP** par GD (comme `AvatarService` : orientation EXIF corrigée, métadonnées et GPS supprimés), grand côté ramené à 2 000 px, vignette 480 px ; plafond de décodage 24 mégapixels ;
-  - `.docx`/`.xlsx` (finfo : type OOXML ou `application/zip`) **et** ouverture par `ZipArchive` : `[Content_Types].xml` doit déclarer un document Word ou Excel, et la présence de `vbaProject.bin` (macros) entraîne le refus ; si l'extension zip manque sur l'hébergement, ces formats sont refusés plutôt qu'acceptés sans contrôle (vérification ajoutée à la checklist de mise en production) — *choix du concepteur* ; `.doc`/`.xls` (`application/msword`, `application/vnd.ms-excel`, ou `application/x-ole-storage`/CDF) ; `.pdf` (`application/pdf`) → conservés tels quels, jamais servis en ligne ;
-  - les formats à macros (`.docm`, `.xlsm`) et tout le reste sont refusés : « Ce type de fichier n'est pas accepté. Formats possibles : photos, Word, Excel, PDF. »
+  - `.docx`/`.xlsx` (finfo : type OOXML ou `application/zip`) **et** ouverture par `ZipArchive` : `[Content_Types].xml` doit déclarer un document Word ou Excel, et la présence de `vbaProject.bin` (macros) entraîne le refus ; si l'extension zip manque sur l'hébergement, ces formats sont refusés plutôt qu'acceptés sans contrôle (vérification ajoutée à la checklist de mise en production) — *choix du concepteur* ; `.pdf` (`application/pdf`) → conservés tels quels, jamais servis en ligne ;
+  - les anciens formats `.doc`/`.xls` sont **refusés** (décision de l'utilisateur : ils peuvent contenir des macros que le serveur ne sait pas détecter simplement) : « Les anciens formats .doc et .xls ne sont pas acceptés. Enregistrez le fichier au format .docx ou .xlsx avant de l'envoyer. » ;
+  - les formats à macros (`.docm`, `.xlsm`) et tout le reste sont refusés : « Ce type de fichier n'est pas accepté. Formats possibles : photos, Word (.docx), Excel (.xlsx), PDF. »
 - **Taille** : 6 Mo par fichier, 10 fichiers par message ; une photo que le navigateur n'a pas pu réduire et qui dépasse 6 Mo est refusée avec « Cette photo est trop lourde (6 Mo au maximum). Prenez-la en qualité réduite ou envoyez-la depuis un autre appareil. » — *choix du concepteur* (tous les navigateurs actuels réduisent la photo, quelle que soit sa définition) ; texte de message facultatif s'il y a au moins une pièce jointe (4 000 caractères au plus sinon, comme au 4a).
 - **Envoi en deux temps** : `POST /api/chat/conversations/{id}/attachments` (un fichier, multipart, membre actif obligatoire) → `{"attachment": {id, kind, name, size, thumb_url}}` ; puis `POST …/messages` avec `body`, `client_id`, `attachment_ids[]`, `reply_to_id` facultatif. Le serveur n'accepte que des pièces jointes **de cet expéditeur, de cette conversation, non encore rattachées** ; il les rattache dans la même transaction que le message. Limite : 30 fichiers par minute et par personne (429).
 - **Pas de doublon** : un `client_id` déjà connu pour cet expéditeur renvoie le message existant (200) au lieu d'en créer un second. Le navigateur réutilise le même `client_id` pour « Réessayer ».
@@ -77,7 +78,7 @@ Chaque évènement `message` porte désormais `client_id`, `edited_at`, `deleted
 
 ### 5.4 Interface
 
-- **Joindre** : bouton trombone à gauche de la zone de saisie (`<input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx">`) ; sur téléphone, le choix système propose appareil photo et galerie. Les fichiers choisis s'affichent au-dessus de la saisie (vignette ou carte, barre de progression, croix pour retirer, « Réessayer » en cas d'échec) ; « Envoyer » attend la fin des envois.
+- **Joindre** : bouton trombone à gauche de la zone de saisie (`<input type="file" multiple accept="image/*,.pdf,.docx,.xlsx">`) ; sur téléphone, le choix système propose appareil photo et galerie. Les fichiers choisis s'affichent au-dessus de la saisie (vignette ou carte, barre de progression, croix pour retirer, « Réessayer » en cas d'échec) ; « Envoyer » attend la fin des envois.
 - **Réduction dans le navigateur** : photos > 2 000 px redimensionnées (canvas, JPEG qualité 0,85) avant envoi ; en cas d'échec ou de navigateur trop ancien, envoi de l'original (le serveur réduit).
 - **Bulle** : vignettes en grille (1 à 4 visibles, « +N »), toucher → image en grand (plein écran simple, fermeture Échap/bouton/toucher) ; cartes de fichier (icône Lucide selon le type, nom, taille, « Télécharger ») ; extrait cité en tête ; « modifié » à côté de l'heure ; compteurs de réactions sous la bulle (toucher → ajoute/retire la sienne ; noms en info-bulle et pour les lecteurs d'écran).
 - **Actions sur un message** : PC au survol, téléphone par appui long → menu : Répondre, Réagir, Modifier et Supprimer (siens, < 15 min, avec confirmation pour supprimer). Modification dans la zone de saisie (bandeau « Modification du message — Annuler »).
@@ -89,7 +90,7 @@ Chaque évènement `message` porte désormais `client_id`, `edited_at`, `deleted
 1. Pièce jointe d'un autre expéditeur, d'une autre conversation ou déjà rattachée → refusée à l'envoi du message.
 2. Non-membre, membre parti, membre arrivé après l'envoi, message supprimé → 404 sur le fichier et la vignette.
 3. Membre arrivé tard : aucune modification, suppression, réaction ni extrait cité d'un message antérieur ne lui est livré.
-4. Faux fichier (script renommé `.jpg` ou `.docx`, PDF déguisé, `.docm`) → refusé ; image réencodée sans EXIF/GPS.
+4. Faux fichier (script renommé `.jpg` ou `.docx`, zip quelconque renommé `.docx`, `.docm` renommé `.docx`, ancien `.doc`/`.xls`) → refusé avec le bon message ; image réencodée sans EXIF/GPS.
 5. Même `client_id` envoyé deux fois → un seul message.
 6. Modifier/supprimer à 15 min + 1 s, ou le message d'un autre → refusé ; suppression → fichiers absents du disque.
 7. Orphelin de plus de 24 h → effacé par `cron:run`.
