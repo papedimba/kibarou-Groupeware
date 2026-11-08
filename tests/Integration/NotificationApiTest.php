@@ -71,4 +71,29 @@ final class NotificationApiTest extends IntegrationTestCase
     {
         $this->assertStringContainsString("worker-src 'self'", $this->get('/login')->headers['Content-Security-Policy']);
     }
+
+    public function testSubdirectoryInstallPrefixesUrls(): void
+    {
+        // Application installée dans un sous-dossier, sur sa propre connexion (et sa propre transaction de test).
+        $this->app->db()->pdo()->rollBack();
+        $this->app = test_app(['base_path' => '/intranet']);
+        $this->app->db()->pdo()->beginTransaction();
+        $me = $this->createUser('moi@kibarou.test');
+        $this->login('moi@kibarou.test', 'Motdepasse123');
+        $this->app->notifier()->notify($me, 'presence.changed', 'Lien', '/profile');
+        $data = json_decode($this->get('/api/notifications')->body, true);
+        $this->assertSame('/intranet/profile', $data['items'][0]['url']);
+        $this->assertStringContainsString('data-base="/intranet/"', $this->get('/')->body);
+    }
+
+    public function testErrorPageKeepsBellState(): void
+    {
+        $me = $this->createUser('moi@kibarou.test');
+        $id = (int) $this->app->notifier()->notify($me, 'presence.changed', 'Ancienne');
+        $this->login('moi@kibarou.test', 'Motdepasse123');
+        $r = $this->get('/admin');
+        $this->assertSame(403, $r->status);
+        $this->assertStringContainsString('data-last-id="' . $id . '"', $r->body);
+        $this->assertStringContainsString('Notifications, 1 non lue', $r->body);
+    }
 }

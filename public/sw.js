@@ -7,13 +7,18 @@ self.addEventListener('activate', function (event) { event.waitUntil(self.client
 
 self.addEventListener('notificationclick', function (event) {
     event.notification.close();
-    var url = (event.notification.data && event.notification.data.url) || '/notifications';
-    // Liens internes uniquement.
-    if (url.charAt(0) !== '/' || url.charAt(1) === '/') { url = '/notifications'; }
+    var fallback = self.registration.scope + 'notifications';
+    var url = fallback;
+    try {
+        // Liens de l'intranet uniquement : même origine que le service worker.
+        var target = new URL((event.notification.data && event.notification.data.url) || fallback, self.location.origin);
+        if (target.origin === self.location.origin) { url = target.href; }
+    } catch (e) { url = fallback; }
     event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
         for (var i = 0; i < list.length; i++) {
             if (new URL(list[i].url).origin === self.location.origin) {
-                return list[i].focus().then(function (c) { return c.navigate(url); });
+                // focus() ou navigate() peuvent être refusés : on ouvre alors une nouvelle fenêtre.
+                return list[i].focus().then(function (c) { return c.navigate(url); }).catch(function () { return self.clients.openWindow(url); });
             }
         }
         return self.clients.openWindow(url);

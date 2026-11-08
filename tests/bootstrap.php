@@ -8,10 +8,11 @@ use App\Core\Migrator;
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 /** Application de test : base dédiée, recréée à chaque lancement de la suite. */
-function test_app(): App
+/** @param array<string,mixed> $app surcharges de la section app (ex. base_path) */
+function test_app(array $app = []): App
 {
     return App::boot(dirname(__DIR__), [
-        'app' => ['env' => 'testing', 'debug' => false, 'url' => 'https://gw.test', 'install_token' => str_repeat('a', 40)],
+        'app' => ['env' => 'testing', 'debug' => false, 'url' => 'https://gw.test', 'install_token' => str_repeat('a', 40), 'base_path' => '', ...$app],
         'db' => [
             'host' => getenv('TEST_DB_HOST') ?: '127.0.0.1',
             'port' => 3306,

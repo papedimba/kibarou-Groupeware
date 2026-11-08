@@ -71,6 +71,9 @@ final class ErrorHandler
         }
         $view = $this->app->view();
         $view->share('currentUser', $user);
+        // État de la cloche : sans lui, l'interrogation repartirait de zéro et réafficherait d'anciennes alertes.
+        $view->share('unreadCount', $this->app->notifier()->unreadCount((int) $user['id']));
+        $view->share('lastNotificationId', $this->app->notifier()->lastId((int) $user['id']));
         $view->share('currentPath', '');
         $view->share('flash', null);
         $view->share('errors', []);

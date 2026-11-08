@@ -26,7 +26,7 @@ $nav = static function (string $path, string $icon, string $label) use ($current
     <link rel="stylesheet" href="<?= e(asset('vendor/bootstrap/bootstrap.min.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>">
 </head>
-<body data-last-id="<?= (int) ($lastNotificationId ?? 0) ?>">
+<body data-base="<?= e(url('/')) ?>" data-last-id="<?= (int) ($lastNotificationId ?? 0) ?>">
 <a class="skip-link" href="#contenu">Aller au contenu</a>
 <div class="kb-shell">
     <aside class="kb-sidebar" id="kb-sidebar" aria-label="Navigation principale">

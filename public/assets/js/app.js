@@ -154,14 +154,16 @@
 
     // Notifications : interrogation toutes les 60 s (onglet visible seulement), cloche et alertes navigateur.
     var bell = document.querySelector('[data-bell]');
+    // Racine de l'application (installation possible dans un sous-dossier).
+    var base = document.body.getAttribute('data-base') || '/';
     var registration = null;
     var isIos = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.navigator.standalone;
     if ('serviceWorker' in navigator && !isIos) {
-        navigator.serviceWorker.register('/sw.js').then(function (r) { registration = r; }).catch(function () { registration = null; });
+        navigator.serviceWorker.register(base + 'sw.js', { scope: base }).then(function (r) { registration = r; }).catch(function () { registration = null; });
     }
     function alertUser(item) {
         if (!('Notification' in window) || Notification.permission !== 'granted') { return; }
-        var options = { body: item.title, data: { url: item.url || '/notifications' }, tag: 'kb-' + item.id };
+        var options = { body: item.title, data: { url: item.url || base + 'notifications' }, tag: 'kb-' + item.id };
         if (registration) { registration.showNotification('Kibarou Groupware', options); return; }
         try {
             var n = new Notification('Kibarou Groupware', options);
@@ -174,7 +176,7 @@
         var timer = null, stopped = false;
         var poll = function () {
             if (stopped || document.hidden) { return; }
-            fetch('/api/notifications?since=' + lastId, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            fetch(base + 'api/notifications?since=' + lastId, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
                 .then(function (r) {
                     if (r.status === 401 || r.status === 403) { stopped = true; clearInterval(timer); return null; }
                     return r.ok ? r.json() : null;

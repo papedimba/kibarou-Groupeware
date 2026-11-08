@@ -19,9 +19,7 @@ abstract class Controller
         $current = $this->app->auth()->user();
         $view->share('currentUser', $current);
         $view->share('unreadCount', $current !== null ? $this->app->notifier()->unreadCount((int) $current['id']) : 0);
-        $view->share('lastNotificationId', $current !== null
-            ? (int) $this->app->db()->value('SELECT COALESCE(MAX(id), 0) FROM notifications WHERE user_id = ?', [$current['id']])
-            : 0);
+        $view->share('lastNotificationId', $current !== null ? $this->app->notifier()->lastId((int) $current['id']) : 0);
         $view->share('flash', $session->getFlash('message'));
         $view->share('flashType', $session->getFlash('type', 'success'));
         $view->share('errors', $session->getFlash('errors', []));

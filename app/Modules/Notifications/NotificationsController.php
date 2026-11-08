@@ -45,7 +45,7 @@ final class NotificationsController extends Controller
             'items' => array_map(static fn ($r) => [
                 'id' => (int) $r['id'],
                 'title' => (string) $r['title'],
-                'url' => $r['url'],
+                'url' => $r['url'] !== null ? url((string) $r['url']) : null,
                 'alert' => (bool) ($prefs[$r['type']]['browser'] ?? false),
             ], $rows),
         ]);

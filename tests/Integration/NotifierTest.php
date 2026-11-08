@@ -67,6 +67,7 @@ final class NotifierTest extends IntegrationTestCase
         $u = $this->createUser('moi@kibarou.test');
         $this->assertNull($this->row($this->app->notifier()->notify($u, 'presence.changed', 'x', 'https://evil.test'))['url']);
         $this->assertNull($this->row($this->app->notifier()->notify($u, 'presence.changed', 'x', '//evil.test'))['url']);
+        $this->assertNull($this->row($this->app->notifier()->notify($u, 'presence.changed', 'x', '/\\evil.test'))['url']);
         $this->assertSame('/profile', $this->row($this->app->notifier()->notify($u, 'presence.changed', 'x', '/profile'))['url']);
     }
 

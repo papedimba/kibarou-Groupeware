@@ -25,8 +25,8 @@ final class Notifier
         if ($user === null) {
             return null;
         }
-        // Liens internes uniquement (pas de « //hôte » ni d'URL absolue).
-        $url = $url !== null && preg_match('#^/(?!/)#', $url) ? mb_substr($url, 0, 255) : null;
+        // Liens internes uniquement : ni URL absolue, ni « //hôte », ni « /\hôte » (les navigateurs lisent \ comme /).
+        $url = $url !== null && preg_match('#^/(?![/\\\\])#', $url) ? mb_substr($url, 0, 255) : null;
         $status = match ($pref['email']) {
             'immediate' => 'queued',
             'digest' => 'digest_pending',
@@ -91,6 +91,12 @@ final class Notifier
                 [$userId, $type, in_array($choice, ['immediate', 'digest', 'off'], true) ? $choice : $current[$type]['email'], isset($browser[$type]) ? 1 : 0],
             );
         }
+    }
+
+    /** Id de la dernière notification de la personne (point de départ de l'interrogation). */
+    public function lastId(int $userId): int
+    {
+        return (int) $this->db->value('SELECT COALESCE(MAX(id), 0) FROM notifications WHERE user_id = ?', [$userId]);
     }
 
     public function unreadCount(int $userId): int
