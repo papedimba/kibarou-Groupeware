@@ -117,5 +117,6 @@ Ordre justifié : l'annuaire et les notifications sont des dépendances de la me
 - Conception : `docs/superpowers/specs/2026-11-08-calendrier-5a-design.md` ; plan : `docs/superpowers/plans/2026-11-08-lot5a-calendrier.md`.
 - Livré : agenda personnel (semaine, mois, liste) ; évènements avec invitations de personnes ou de services, réponses, notifications sans description ; rappels (alerte navigateur, journée entière à 7 h ou la veille à 18 h) ; séries (jours ouvrés, hebdomadaire, mensuelle ; « cette fois » ou « et les suivantes » ; prolongation) ; disponibilités de dix personnes sans détail ; export .ics et abonnement par lien secret.
 - Décisions : personne n'ouvre l'agenda d'un collègue (seulement les disponibilités) ; congés = statut du jour de l'annuaire ; pas d'agendas d'équipe.
-- Tests : 253 PHPUnit ; test de fumée à deux comptes (invitation, réponse, disponibilités sans détail).
+- Tests : 260 PHPUnit ; test de fumée à deux comptes (invitation, réponse, disponibilités sans détail).
+- Relecture finale indépendante : 5 points importants et 7 mineurs vérifiés ; importants corrigés, mineurs reportés (voir le bilan du lot).
 - À confirmer : fuseau horaire de l'entreprise (`APP_TIMEZONE`, Bamako supposé).
