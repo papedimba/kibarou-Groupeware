@@ -1,6 +1,6 @@
 # Lot 4a — Messagerie, l'essentiel : conception
 
-Statut : rédigé le 08/11/2026, en attente de relecture et d'approbation.
+Statut : rédigé le 08/11/2026, relu par un constructeur indépendant, complété ; en attente d'approbation.
 Références : cahier des charges, module 2 ; `PRODUCT.md` ; ADR 0004 (polling) ; lots 2 (annuaire, présence) et 3 (notifications, interrogation passive).
 
 ## 1. Intention
@@ -79,8 +79,8 @@ Permettre aux collaborateurs de se coordonner par écrit entre bureau et chantie
 - `GET /api/chat/updates?since=<id d'évènement>` : évènements des conversations où je suis membre actif, `id > since` **et** `id > joined_event_id`, 200 au plus, avec les données nécessaires à l'affichage (expéditeur, texte échappé côté client, conversation) et les compteurs de non-lus des conversations touchées. **Une requête indexée** quand rien n'a changé.
 - Rythme (réglable dans la configuration `chat.poll`) : **3 s** quand une conversation est ouverte et que la personne a interagi dans la dernière minute, **10 s** après 1 min sans interaction, **30 s** après 5 min ou sur la seule liste ; arrêt quand l'onglet est caché, reprise immédiate au retour.
 - Hors messagerie, l'interrogation de 60 s du lot 3 renvoie aussi le **total de non-lus de la messagerie** (badge du menu), sans requête supplémentaire côté navigateur.
-- **Session** : les `GET /api/*` restent passifs (ne prolongent pas la session) ; les écritures `POST /api/*` (envoyer, marquer lu) sont une activité réelle et **prolongent** la session (ajustement de la règle du lot 3, limitée aux GET).
-- **Lu** : quand des messages d'une conversation ouverte et visible sont affichés, la page appelle `POST /api/chat/conversations/{id}/read` avec le dernier id d'évènement vu (met à jour `last_read_event_id`, `last_read_at`, jamais à la baisse).
+- **Session** (*choix de conception après relecture*) : les `GET /api/*` restent passifs. **Envoyer** un message prolonge la session. Le **marquage « lu »**, appelé automatiquement par la page, ne la prolonge que si la page signale une interaction réelle (touche, clic ou toucher) dans les **2 dernières minutes** (`active=1`) ; sinon il est passif. Ainsi un PC laissé ouvert sur un groupe actif se déconnecte normalement après 2 h sans activité.
+- **Lu** : à l'ouverture d'une conversation et quand des messages d'une conversation ouverte et visible sont affichés, la page appelle `POST /api/chat/conversations/{id}/read` avec le dernier id d'évènement vu (met à jour `last_read_event_id`, `last_read_at`, jamais à la baisse). **Ce marquage marque aussi comme lues les notifications `chat.message` non lues de cette conversation** (*choix de conception après relecture*) : la cloche et le récapitulatif ne rappellent pas une conversation déjà lue, et la règle « une notification tant qu'elle n'est pas lue » repart à zéro.
 - Charge estimée (hypothèse 50 utilisateurs, 15 avec une conversation ouverte et active) : ≈ 5 requêtes/s au pire, une requête SQL indexée chacune ; à confronter aux limites Likuid (checklist de mise en production) ; intervalles relevables par configuration.
 
 ### 5.5 Notifications
