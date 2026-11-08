@@ -1,6 +1,6 @@
 # Lot 5a — Calendrier : conception
 
-Statut : rédigé le 08/11/2026 ; relecture par un constructeur indépendant, puis approbation de l'utilisateur.
+Statut : rédigé le 08/11/2026, relu par un constructeur indépendant, complété ; en attente d'approbation.
 Références : PLAN.md (lot 5) ; notifications (lot 3) ; présence (lot 2, `user_presence`) ; `cron:run`.
 
 ## 1. Intention
@@ -28,7 +28,7 @@ Donner à chacun un agenda dans l'intranet, partagé avec ses collègues sans ex
 
 ## 3. Contraintes
 
-Mutualisé Likuid, PHP natif, pas de processus permanent ; `cron:run` toutes les 5 minutes (rappels à ±5 min) ; tout stocké en UTC, affiché dans `app.timezone` ; CSP stricte ; ~50 utilisateurs ; WCAG AA, cibles 44 px ; fonctionne sans JavaScript.
+Mutualisé Likuid, PHP natif, pas de processus permanent ; `cron:run` toutes les 5 minutes (rappels à ±5 min) ; tout stocké en UTC, affiché dans `app.timezone` (`APP_TIMEZONE` ; Bamako supposé, à confirmer par l'utilisateur ; les tests fixent un fuseau à heure d'été pour couvrir le changement d'heure) ; CSP stricte ; ~50 utilisateurs ; WCAG AA, cibles 44 px ; fonctionne sans JavaScript.
 
 ## 4. Approches (choisies par l'utilisateur)
 
@@ -50,6 +50,7 @@ Mutualisé Likuid, PHP natif, pas de processus permanent ; `cron:run` toutes les
 
 ### 5.2 Règles
 
+- **Agenda d'un collègue** : on ne peut pas ouvrir l'agenda d'une autre personne ; seule la vue « Disponibilités » montre les créneaux occupés d'autres personnes, quand on cherche un créneau (décision de l'utilisateur). Les vues semaine, mois et liste ne montrent que **mes** évènements (organisateur ou participant).
 - **Qui voit quoi** : participant (y compris organisateur) → tout ; autre utilisateur → créneau « Occupé » sans titre ni lieu, sauf `is_private` → rien ; un évènement annulé n'occupe plus de créneau. Contrôlé côté serveur pour chaque page, export et API.
 - **Qui modifie** : l'organisateur seul (titre, horaires, lieu, description, participants, rappel par défaut, confidentialité, annulation). Un participant répond, règle son propre rappel (*choix du concepteur* : `reminder_minutes` sur la ligne participant, initialisé depuis l'évènement), ou se retire (= « Je n'y serai pas »).
 - **Inviter un service** : ajoute les membres actifs du service au moment de l'invitation (instantané, pas de suivi des mutations) — *choix du concepteur*.
@@ -72,7 +73,7 @@ Mutualisé Likuid, PHP natif, pas de processus permanent ; `cron:run` toutes les
 
 ## 6. Tests attendus (Review Focus)
 
-1. Non-participant : jamais de titre/lieu/description (page, liste, mois, disponibilités, `.ics`, abonnement) ; « Privé » invisible même comme « Occupé ».
+1. Non-participant : jamais de titre/lieu/description (page de l'évènement, disponibilités, `.ics`, abonnement ; l'URL d'un évènement d'autrui → 404) ; « Privé » invisible même comme « Occupé ».
 2. Rappel : envoyé une seule fois, à la bonne fenêtre, pas aux réponses `no`, pas après le début ; journée entière aux heures prévues.
 3. Série : 1 an / 260 occurrences au plus ; « cette fois seulement » n'affecte que l'occurrence ; « toute la série » épargne les occurrences détachées et passées.
 4. Abonnement : mauvais jeton → 404 ; ancien jeton après régénération → 404 ; le flux ne contient que mes évènements.
