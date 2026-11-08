@@ -129,4 +129,58 @@ final class PresenceTest extends IntegrationTestCase
             $this->assertSame([], $dupes, "ids en double sur $path");
         }
     }
+
+    /** @return array{head:int,a:int,b:int,outsider:int} */
+    private function crew(): array
+    {
+        $head = $this->createUser('chef@kibarou.test');
+        $dept = $this->app->db()->insert('departments', ['name' => 'Travaux', 'manager_user_id' => $head, 'is_active' => 1, 'created_at' => now_utc(), 'updated_at' => now_utc()]);
+        $a = $this->createUser('a@kibarou.test', ['collaborateur'], 'Motdepasse123', ['first_name' => 'Agent', 'last_name' => 'Alpha', 'department_id' => $dept]);
+        $b = $this->createUser('b@kibarou.test', ['collaborateur'], 'Motdepasse123', ['first_name' => 'Agent', 'last_name' => 'Bravo', 'department_id' => $dept]);
+        $outsider = $this->createUser('x@kibarou.test');
+        return compact('head', 'a', 'b', 'outsider');
+    }
+
+    public function testTeamBlockListsMembers(): void
+    {
+        $this->crew();
+        $this->login('chef@kibarou.test', 'Motdepasse123');
+        $body = $this->get('/')->body;
+        $this->assertStringContainsString('Mon équipe aujourd\'hui', $body);
+        $this->assertStringContainsString('Agent Alpha', $body);
+        $this->cookies = [];
+        $this->login('x@kibarou.test', 'Motdepasse123');
+        $this->assertStringNotContainsString('Mon équipe aujourd\'hui', $this->get('/')->body);
+    }
+
+    public function testMembersWithValidStatusAreUncheckedByDefault(): void
+    {
+        $c = $this->crew();
+        $this->presence($c['a'], 'leave', $this->day('today'), $this->day('+1 day'));
+        $this->login('chef@kibarou.test', 'Motdepasse123');
+        $body = $this->get('/')->body;
+        $this->assertMatchesRegularExpression('/name="user_ids\[\]" value="' . $c['a'] . '"(?![^>]*checked)[^>]*>/', $body);
+        $this->assertMatchesRegularExpression('/name="user_ids\[\]" value="' . $c['b'] . '"[^>]*checked/', $body);
+        $this->assertStringContainsString('En congé', $body);
+    }
+
+    public function testBulkUpdate(): void
+    {
+        $c = $this->crew();
+        $this->login('chef@kibarou.test', 'Motdepasse123');
+        $this->assertRedirect($this->post('/presence/team', [
+            'status' => 'site', 'site_label' => 'Résidence X', 'user_ids' => [(string) $c['a'], (string) $c['b']],
+        ]), '/');
+        $this->assertSame(2, (int) $this->app->db()->value("SELECT COUNT(*) FROM user_presence WHERE status = 'site' AND site_label = 'Résidence X'"));
+        $this->assertSame(2, (int) $this->app->db()->value("SELECT COUNT(*) FROM audit_logs WHERE action = 'presence.updated'"));
+    }
+
+    public function testBulkRejectsForeignIds(): void
+    {
+        $c = $this->crew();
+        $this->login('chef@kibarou.test', 'Motdepasse123');
+        $r = $this->post('/presence/team', ['status' => 'office', 'user_ids' => [(string) $c['a'], (string) $c['outsider']]]);
+        $this->assertSame(403, $r->status);
+        $this->assertSame(0, (int) $this->app->db()->value('SELECT COUNT(*) FROM user_presence'));
+    }
 }

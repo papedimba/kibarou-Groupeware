@@ -21,6 +21,16 @@ final class PresenceController extends Controller
         return $this->redirect($this->returnTo($request), 'Statut enregistré.');
     }
 
+    public function team(Request $request): Response
+    {
+        try {
+            $n = $this->app->presence()->bulkSet($this->user(), $request->intList('user_ids'), $request->post);
+        } catch (ValidationException $e) {
+            return $this->back('/', $e->errors, $request->post);
+        }
+        return $this->redirect('/', "Statut enregistré pour $n personne(s).");
+    }
+
     public function clear(Request $request): Response
     {
         $this->app->presence()->clear($this->user(), $this->target($request));

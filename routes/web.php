@@ -43,6 +43,7 @@ return static function (Router $r): void {
             $r->get('/directory/{id}', [DirectoryController::class, 'show']);
             $r->post('/presence', [PresenceController::class, 'update']);
             $r->post('/presence/clear', [PresenceController::class, 'clear']);
+            $r->post('/presence/team', [PresenceController::class, 'team']);
         });
 
         $r->group(['perm:admin.access'], static function (Router $r) {

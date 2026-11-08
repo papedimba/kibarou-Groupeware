@@ -98,6 +98,46 @@ final class PresenceService
         $this->write($actor, $targetId, $this->validate($input));
     }
 
+    /**
+     * Personnes actives dont l'acteur est le responsable (§5.0), avec leur statut du jour.
+     * @param array<string,mixed> $actor
+     * @return list<array<string,mixed>>
+     */
+    public function team(array $actor): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT u.id, u.first_name, u.last_name FROM users u LEFT JOIN departments d ON d.id = u.department_id
+             WHERE u.status = 'active' AND u.deleted_at IS NULL AND u.id <> ? AND (u.manager_id = ? OR d.manager_user_id = ?)
+             ORDER BY u.last_name, u.first_name",
+            [$actor['id'], $actor['id'], $actor['id']],
+        );
+        $statuses = $this->current(array_map(static fn ($r) => (int) $r['id'], $rows));
+        return array_map(static fn ($r) => [...$r, 'presence' => $statuses[(int) $r['id']] ?? null], $rows);
+    }
+
+    /**
+     * Même statut pour plusieurs personnes. Tout ou rien : un seul identifiant non modifiable refuse l'ensemble.
+     * @param array<string,mixed> $actor
+     * @param list<int> $targetIds
+     * @param array<string,mixed> $input
+     */
+    public function bulkSet(array $actor, array $targetIds, array $input): int
+    {
+        if ($targetIds === []) {
+            throw new ValidationException(['user_ids' => 'Cochez au moins une personne.']);
+        }
+        foreach ($targetIds as $id) {
+            $this->guard($actor, $id);
+        }
+        $data = $this->validate($input);
+        $this->db->transaction(function () use ($actor, $targetIds, $data) {
+            foreach ($targetIds as $id) {
+                $this->write($actor, $id, $data);
+            }
+        });
+        return count($targetIds);
+    }
+
     /** @param array<string,mixed> $actor */
     public function clear(array $actor, int $targetId): void
     {

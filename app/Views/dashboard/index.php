@@ -2,7 +2,7 @@
 /**
  * @var array<string,mixed> $currentUser @var array<string,mixed> $me
  * @var array<string,mixed>|null $alerts @var list<array<string,mixed>> $contacts @var array<string,mixed>|null $myStatus
- * @var array<string,string> $errors @var array<string,mixed> $old
+ * @var array<string,string> $errors @var array<string,mixed> $old @var list<array<string,mixed>> $team
  */
 $this->layout('layouts/app', ['title' => 'Accueil']);
 $value = static fn (?string $v): string => $v !== null && $v !== '' ? e($v) : '<span class="text-secondary">Non renseigné</span>';
@@ -18,6 +18,15 @@ $value = static fn (?string $v): string => $v !== null && $v !== '' ? e($v) : '<
             <?= $this->partial('partials/presence_form', ['targetId' => null, 'status' => $myStatus, 'returnTo' => '/', 'errors' => $errors, 'old' => $old, 'idPrefix' => 'home']) ?>
         </div>
     </section>
+<?php endif; ?>
+<?php if ($team !== []): ?>
+    <details class="card mb-4 kb-team" open>
+        <summary class="card-header h6 m-0">Mon équipe aujourd'hui (<?= count($team) ?>)</summary>
+        <div class="card-body">
+            <p class="small text-secondary">Les personnes qui ont déjà un statut valable aujourd'hui sont décochées : cochez-les seulement pour le remplacer.</p>
+            <?= $this->partial('partials/presence_form', ['targetId' => null, 'status' => null, 'returnTo' => '/', 'errors' => $errors, 'old' => $old, 'idPrefix' => 'team', 'team' => $team]) ?>
+        </div>
+    </details>
 <?php endif; ?>
 
 <div class="row g-4">
