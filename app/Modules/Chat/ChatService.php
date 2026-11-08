@@ -22,6 +22,8 @@ final class ChatService
     private const MAX_PER_MINUTE = 30;
     private const MAX_MEMBERS = 51;
     private const MAX_FILES_PER_MINUTE = 30;
+    public const EDIT_WINDOW_SECONDS = 900;
+    public const REACTIONS = ['👍', '✅', '👀', '🙏', '❤️', '😂'];
 
     public function __construct(
         private readonly Database $db,
@@ -179,6 +181,72 @@ final class ChatService
         ) ?? throw new HttpException(404);
     }
 
+    /** Corrige le texte d'un de ses messages, dans les 15 minutes. @param array<string,mixed> $actor */
+    public function edit(array $actor, int $messageId, string $body): int
+    {
+        $message = $this->ownRecentMessage($actor, $messageId, 'Ce message ne peut plus être modifié.');
+        $body = rtrim($body);
+        if (trim($body) === '') {
+            throw new ValidationException(['body' => 'Le message est vide.']);
+        }
+        if (mb_strlen($body) > self::MAX_LENGTH) {
+            throw new ValidationException(['body' => 'Le message ne doit pas dépasser ' . self::MAX_LENGTH . ' caractères.']);
+        }
+        return $this->db->transaction(function () use ($message, $body, $actor) {
+            $this->db->update('messages', ['body' => $body, 'edited_at' => now_utc()], ['id' => $message['id']]);
+            return $this->event((int) $message['conversation_id'], 'message_edited', (int) $actor['id'], null, (int) $message['id'], null, false);
+        });
+    }
+
+    /** Retire un de ses messages, dans les 15 minutes : texte vidé, fichiers effacés du disque. @param array<string,mixed> $actor */
+    public function delete(array $actor, int $messageId): int
+    {
+        $message = $this->ownRecentMessage($actor, $messageId, 'Ce message ne peut plus être supprimé.');
+        $files = $this->db->fetchAll('SELECT * FROM chat_attachments WHERE message_id = ?', [$message['id']]);
+        $eventId = $this->db->transaction(function () use ($message, $actor) {
+            $this->db->update('messages', ['body' => '', 'deleted_at' => now_utc()], ['id' => $message['id']]);
+            $this->db->run('DELETE FROM chat_attachments WHERE message_id = ?', [$message['id']]);
+            $this->db->run('DELETE FROM chat_reactions WHERE message_id = ?', [$message['id']]);
+            return $this->event((int) $message['conversation_id'], 'message_deleted', (int) $actor['id'], null, (int) $message['id'], null, false);
+        });
+        // Après validation : un échec de la transaction ne doit pas avoir effacé les fichiers.
+        $this->attachments->deleteFiles($files);
+        $this->audit->log((int) $actor['id'], 'chat.message_deleted', 'conversation', (int) $message['conversation_id']);
+        return $eventId;
+    }
+
+    /** Ajoute ou retire une réaction (liste fixe), sans notification. @param array<string,mixed> $actor */
+    public function react(array $actor, int $messageId, string $emoji): int
+    {
+        $me = (int) $actor['id'];
+        $message = $this->repo->visibleMessage($me, $messageId) ?? throw new HttpException(404);
+        if ($message['deleted_at'] !== null) {
+            throw new HttpException(404);
+        }
+        if (!in_array($emoji, self::REACTIONS, true)) {
+            throw new ValidationException(['emoji' => 'Réaction inconnue.']);
+        }
+        return $this->db->transaction(function () use ($me, $message, $emoji) {
+            $removed = $this->db->run('DELETE FROM chat_reactions WHERE message_id = ? AND user_id = ? AND emoji = ?', [$message['id'], $me, $emoji])->rowCount();
+            if ($removed === 0) {
+                $this->db->insert('chat_reactions', ['message_id' => $message['id'], 'user_id' => $me, 'emoji' => $emoji, 'created_at' => now_utc()]);
+            }
+            return $this->event((int) $message['conversation_id'], 'reaction', $me, null, (int) $message['id'], null, false);
+        });
+    }
+
+    /** @param array<string,mixed> $actor @return array<string,mixed> */
+    private function ownRecentMessage(array $actor, int $messageId, string $refusal): array
+    {
+        $me = (int) $actor['id'];
+        $message = $this->repo->visibleMessage($me, $messageId) ?? throw new HttpException(404);
+        $tooOld = strtotime($message['created_at'] . ' UTC') < time() - self::EDIT_WINDOW_SECONDS;
+        if ((int) $message['sender_id'] !== $me || $message['deleted_at'] !== null || $tooOld) {
+            throw new ValidationException(['body' => $refusal]);
+        }
+        return $message;
+    }
+
     /** @return array{event_id:int,message_id:int}|null */
     private function existingByClientId(int $senderId, string $clientId): ?array
     {
@@ -317,13 +385,16 @@ final class ChatService
     }
 
     /** Ajoute un évènement et met à jour la date de dernière activité de la conversation. */
-    private function event(int $conversationId, string $type, ?int $actorId, ?int $targetId = null, ?int $messageId = null, ?string $detail = null): int
+    private function event(int $conversationId, string $type, ?int $actorId, ?int $targetId = null, ?int $messageId = null, ?string $detail = null, bool $touch = true): int
     {
         $id = $this->db->insert('chat_events', [
             'conversation_id' => $conversationId, 'type' => $type, 'message_id' => $messageId,
             'actor_id' => $actorId, 'target_user_id' => $targetId, 'detail' => $detail, 'created_at' => now_utc(),
         ]);
-        $this->db->run('UPDATE conversations SET last_event_at = UTC_TIMESTAMP() WHERE id = ?', [$conversationId]);
+        // Une modification, une suppression ou une réaction ne fait pas remonter la conversation.
+        if ($touch) {
+            $this->db->run('UPDATE conversations SET last_event_at = UTC_TIMESTAMP() WHERE id = ?', [$conversationId]);
+        }
         return $id;
     }
 

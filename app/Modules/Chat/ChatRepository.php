@@ -26,6 +26,11 @@ final class ChatRepository
     private const EVENT_COLUMNS = "e.id, e.conversation_id, e.type, e.created_at, e.actor_id, e.target_user_id, e.detail,
         e.message_id, m.sender_id, m.body, m.client_id, m.reply_to_id, m.edited_at, m.deleted_at, CONCAT(a.first_name, ' ', a.last_name) AS actor_name, CONCAT(t.first_name, ' ', t.last_name) AS target_name";
 
+    private const ACTIONS = "'message_edited', 'message_deleted', 'reaction'";
+    /** Une modification, suppression ou réaction n'est livrée que si le message visé est lui-même visible (postérieur à l'arrivée). */
+    private const ORIGIN_VISIBLE = "(e.type NOT IN ('message_edited', 'message_deleted', 'reaction') OR EXISTS (SELECT 1 FROM chat_events oe
+        WHERE oe.message_id = e.message_id AND oe.type = 'message' AND oe.id > cm.joined_event_id))";
+
     private const EVENT_JOINS = "LEFT JOIN messages m ON m.id = e.message_id
         LEFT JOIN users a ON a.id = e.actor_id
         LEFT JOIN users t ON t.id = e.target_user_id";
@@ -40,7 +45,7 @@ final class ChatRepository
             'SELECT ' . self::EVENT_COLUMNS . ' FROM chat_events e
              JOIN conversation_members cm ON cm.conversation_id = e.conversation_id AND cm.user_id = ? AND cm.left_at IS NULL
              ' . self::EVENT_JOINS . "
-             WHERE e.id > ? AND e.id > cm.joined_event_id AND e.type <> 'created'
+             WHERE e.id > ? AND e.id > cm.joined_event_id AND e.type <> 'created' AND " . self::ORIGIN_VISIBLE . "
              ORDER BY e.id LIMIT " . max(1, min(500, $limit)),
             [$userId, $since],
         );
@@ -56,7 +61,7 @@ final class ChatRepository
             'SELECT ' . self::EVENT_COLUMNS . ' FROM chat_events e
              JOIN conversation_members cm ON cm.conversation_id = e.conversation_id AND cm.user_id = ? AND cm.left_at IS NULL
              ' . self::EVENT_JOINS . "
-             WHERE e.conversation_id = ? AND e.id > cm.joined_event_id AND e.type <> 'created' AND e.id < ?
+             WHERE e.conversation_id = ? AND e.id > cm.joined_event_id AND e.type NOT IN ('created', " . self::ACTIONS . ") AND e.id < ?
              ORDER BY e.id DESC LIMIT " . max(1, min(200, $limit)),
             [$userId, $cid, $beforeEventId ?? PHP_INT_MAX],
         );
@@ -75,8 +80,8 @@ final class ChatRepository
     {
         $rows = $this->db->fetchAll(
             "SELECT c.id, c.type, c.name, c.last_event_at, " . self::UNREAD . " AS unread,
-                    (SELECT LEFT(m.body, 80) FROM chat_events le JOIN messages m ON m.id = le.message_id
-                     WHERE le.conversation_id = c.id AND le.type = 'message' AND le.id > cm.joined_event_id ORDER BY le.id DESC LIMIT 1) AS last_body,
+                    (SELECT le.message_id FROM chat_events le
+                     WHERE le.conversation_id = c.id AND le.type = 'message' AND le.id > cm.joined_event_id ORDER BY le.id DESC LIMIT 1) AS last_message_id,
                     o.id AS other_id, o.first_name AS other_first_name, o.last_name AS other_last_name, o.avatar_path AS other_avatar_path
              FROM conversation_members cm
              JOIN conversations c ON c.id = cm.conversation_id
@@ -89,7 +94,17 @@ final class ChatRepository
              ORDER BY c.last_event_at DESC, c.id DESC",
             [$userId, $openId],
         );
-        return array_map(static function ($r) {
+        $lastIds = array_values(array_filter(array_map(static fn ($r) => (int) $r['last_message_id'], $rows)));
+        $last = $lastIds === [] ? [] : array_column($this->db->fetchAll('SELECT id, body, deleted_at FROM messages WHERE id IN ('
+            . implode(',', array_fill(0, count($lastIds), '?')) . ')', $lastIds), null, 'id');
+        $files = $this->attachmentsByMessage($lastIds);
+        return array_map(static function ($r) use ($last, $files) {
+            $m = $last[(int) $r['last_message_id']] ?? null;
+            $r['last_body'] = match (true) {
+                $m === null => null,
+                $m['deleted_at'] !== null => 'Message supprimé',
+                default => self::excerpt((string) $m['body'], $files[(int) $m['id']] ?? []),
+            };
             $r['unread'] = (int) $r['unread'];
             $r['title'] = $r['type'] === 'group' ? (string) $r['name'] : trim($r['other_first_name'] . ' ' . $r['other_last_name']);
             return $r;

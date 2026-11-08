@@ -187,6 +187,30 @@ final class ChatController extends Controller
         ];
     }
 
+    public function editMessage(Request $request): Response
+    {
+        return $this->action($this->app->chat()->edit($this->user(), $this->id($request), (string) $request->input('body', '')));
+    }
+
+    public function deleteMessage(Request $request): Response
+    {
+        return $this->action($this->app->chat()->delete($this->user(), $this->id($request)));
+    }
+
+    public function reactMessage(Request $request): Response
+    {
+        return $this->action($this->app->chat()->react($this->user(), $this->id($request), $request->str('emoji')));
+    }
+
+    /** Renvoie l'évènement créé, avec l'état à jour du message visé. */
+    private function action(int $eventId): Response
+    {
+        $me = (int) $this->user()['id'];
+        $repo = new ChatRepository($this->app->db());
+        $events = array_values(array_filter($repo->events($me, $eventId - 1, 1), static fn ($e) => (int) $e['id'] === $eventId));
+        return Response::json(['event' => self::event($repo->hydrate($me, $events)[0])]);
+    }
+
     /** @param array<string,mixed> $a @return array<string,mixed> */
     private static function attachment(array $a): array
     {
