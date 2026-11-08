@@ -123,4 +123,17 @@ final class ChannelSyncTest extends IntegrationTestCase
         $this->assertSame('Travaux et chantiers', $salon['name']);
         $this->assertSame('Travaux et chantiers', $this->app->db()->value("SELECT detail FROM chat_events WHERE conversation_id = ? AND type = 'renamed'", [$salon['id']]));
     }
+
+    public function testLongServiceNameDoesNotBreakSync(): void
+    {
+        $long = str_repeat('Direction des études techniques ', 4);
+        $first = $this->dept(trim($long));
+        $other = $this->dept('Travaux');
+        $a = $this->createUser('a@kibarou.test', ['collaborateur'], 'Motdepasse123', ['department_id' => $other]);
+        $this->app->channels()->syncDepartments();
+        $this->assertSame(mb_substr(trim($long), 0, 80), $this->salon($first)['name']);
+        $this->assertSame([$a], $this->members((int) $this->salon($other)['id']), 'les services suivants sont synchronisés');
+        $this->app->db()->update('departments', ['name' => trim($long) . ' bis'], ['id' => $first]);
+        $this->assertSame(['created' => 0, 'added' => 0, 'removed' => 0], $this->app->channels()->syncDepartments(), 'nom identique une fois tronqué : rien ne change');
+    }
 }
