@@ -40,6 +40,8 @@ final class AuditLabels
         'chat.channel_created' => 'Salon créé',
         'chat.channel_updated' => 'Salon modifié',
         'chat.channel_archived' => 'Salon archivé',
+        'calendar.event_cancelled' => 'Évènement annulé',
+        'calendar.feed_generated' => 'Lien d\'abonnement au calendrier créé',
         'profile.photo_updated' => 'Photo modifiée',
         'user.photo_removed' => 'Photo retirée',
     ];

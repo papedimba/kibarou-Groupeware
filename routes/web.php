@@ -6,6 +6,8 @@ use App\Core\Router;
 use App\Modules\Admin\AdminController;
 use App\Modules\Auth\AuthController;
 use App\Modules\Dashboard\DashboardController;
+use App\Modules\Calendar\CalendarController;
+use App\Modules\Calendar\EventController;
 use App\Modules\Chat\ChannelController;
 use App\Modules\Chat\ChatController;
 use App\Modules\Directory\DirectoryController;
@@ -59,6 +61,18 @@ return static function (Router $r): void {
             $r->post('/presence', [PresenceController::class, 'update']);
             $r->post('/presence/clear', [PresenceController::class, 'clear']);
             $r->post('/presence/team', [PresenceController::class, 'team']);
+        });
+
+        $r->group(['perm:calendar.use'], static function (Router $r) {
+            $r->get('/calendar', [CalendarController::class, 'index']);
+            $r->get('/calendar/events/new', [EventController::class, 'newForm']);
+            $r->post('/calendar/events', [EventController::class, 'create']);
+            $r->get('/calendar/events/{id}', [EventController::class, 'show']);
+            $r->get('/calendar/events/{id}/edit', [EventController::class, 'editForm']);
+            $r->post('/calendar/events/{id}', [EventController::class, 'update']);
+            $r->post('/calendar/events/{id}/cancel', [EventController::class, 'cancel']);
+            $r->post('/calendar/events/{id}/respond', [EventController::class, 'respond']);
+            $r->post('/calendar/events/{id}/reminder', [EventController::class, 'reminder']);
         });
 
         $r->group(['perm:chat.use'], static function (Router $r) {

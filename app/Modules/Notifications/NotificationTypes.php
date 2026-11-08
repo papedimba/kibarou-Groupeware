@@ -16,6 +16,11 @@ final class NotificationTypes
         'account.enabled' => ['label' => 'Compte réactivé', 'email' => 'immediate', 'browser' => false, 'mandatory' => false],
         'presence.changed' => ['label' => 'Statut modifié par un responsable', 'email' => 'digest', 'browser' => true, 'mandatory' => false],
         'chat.message' => ['label' => 'Nouveau message', 'email' => 'digest', 'browser' => true, 'mandatory' => false],
+        'calendar.invited' => ['label' => 'Invitation à un évènement', 'email' => 'immediate', 'browser' => true, 'mandatory' => false],
+        'calendar.updated' => ['label' => 'Évènement modifié', 'email' => 'immediate', 'browser' => true, 'mandatory' => false],
+        'calendar.cancelled' => ['label' => 'Évènement annulé', 'email' => 'immediate', 'browser' => true, 'mandatory' => false],
+        'calendar.reminder' => ['label' => 'Rappel d\'évènement', 'email' => 'off', 'browser' => true, 'mandatory' => false],
+        'calendar.response' => ['label' => 'Réponse à mon invitation', 'email' => 'digest', 'browser' => false, 'mandatory' => false],
     ];
 
     /** @return array<string,array{label:string,email:string,browser:bool,mandatory:bool}> */

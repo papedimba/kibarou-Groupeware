@@ -445,3 +445,163 @@ button.kb-msg-seen { min-height: 44px; margin: -.6rem 0; padding: 0 .25rem; text
 .kb-search-head { font-size: .85rem; color: var(--kb-gray-500); }
 .kb-search-head strong { color: var(--kb-night); }
 .kb-search-excerpt mark { background: #fde68a; color: inherit; padding: 0 .1em; border-radius: 2px; }
+
+/* Calendrier (lot 5a) */
+.kb-cal-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; margin-bottom: 1rem; }
+.kb-cal-nav { display: flex; gap: .4rem; }
+.kb-cal-nav .btn { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
+.kb-cal-views { margin-bottom: 0; border-bottom: 0; }
+.kb-cal-ev { display: block; text-decoration: none; color: var(--kb-night); background: var(--kb-blue-soft); border-radius: 6px; padding: .15rem .4rem; font-size: .8rem; line-height: 1.25; overflow: hidden; box-shadow: inset 3px 0 0 var(--kb-blue); }
+.kb-cal-ev:hover { background: #d6e3ff; }
+.kb-cal-ev.is-pending { background: #fff; box-shadow: inset 3px 0 0 var(--kb-blue), inset 0 0 0 1px #c7d6f8; }
+.kb-cal-ev.is-declined, .kb-cal-ev.is-cancelled { background: var(--kb-gray-50); color: var(--kb-gray-500); box-shadow: inset 3px 0 0 var(--kb-gray-200); }
+.kb-cal-ev.is-cancelled .kb-cal-ev-title { text-decoration: line-through; }
+.kb-cal-ev-time { font-weight: 700; margin-right: .25rem; }
+.kb-cal-week { background: #fff; border: 1px solid var(--kb-gray-200); border-radius: 12px; overflow-x: auto; }
+.kb-cal-week-head, .kb-cal-week-body { display: grid; grid-template-columns: 3.2rem repeat(7, minmax(7.5rem, 1fr)); min-width: 56rem; }
+.kb-cal-week-head { border-bottom: 1px solid var(--kb-gray-200); }
+.kb-cal-dayhead { padding: .4rem; border-left: 1px solid var(--kb-gray-200); display: flex; flex-direction: column; gap: .25rem; font-size: .85rem; color: var(--kb-gray-500); }
+.kb-cal-dayhead strong { color: var(--kb-night); font-size: 1.1rem; }
+.kb-cal-dayhead.is-today strong { color: var(--kb-blue); }
+.kb-cal-gutter { display: flex; flex-direction: column; }
+.kb-cal-hour { height: 48px; font-size: .7rem; color: var(--kb-gray-500); text-align: right; padding-right: .35rem; transform: translateY(-.45rem); }
+.kb-cal-daycol { position: relative; height: 624px; border-left: 1px solid var(--kb-gray-200);
+    background-image: repeating-linear-gradient(to bottom, var(--kb-gray-200) 0, var(--kb-gray-200) 1px, transparent 1px, transparent 48px); }
+.kb-cal-daycol.is-today { background-color: #f8fbff; }
+.kb-cal-daycol .kb-cal-ev { position: absolute; left: 2px; right: 2px; min-height: 22px; }
+.kb-cal-presence { font-size: .75rem; color: #9a3412; background: #fff7ed; border-radius: 6px; padding: .1rem .35rem; }
+.kb-cal-month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); background: #fff; border: 1px solid var(--kb-gray-200); border-radius: 12px; overflow: hidden; }
+.kb-cal-month-head { padding: .4rem; font-size: .75rem; font-weight: 600; color: var(--kb-gray-500); border-bottom: 1px solid var(--kb-gray-200); }
+.kb-cal-month-day { min-height: 6.5rem; padding: .25rem; border-right: 1px solid var(--kb-gray-200); border-bottom: 1px solid var(--kb-gray-200); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kb-cal-month-day.is-other { background: var(--kb-gray-50); }
+.kb-cal-month-num { align-self: flex-start; min-width: 44px; min-height: 32px; padding: .1rem .35rem; font-weight: 600; color: var(--kb-night); text-decoration: none; border-radius: 6px; }
+.kb-cal-month-day.is-today .kb-cal-month-num { background: var(--kb-blue); color: #fff; }
+.kb-cal-chip { white-space: nowrap; text-overflow: ellipsis; }
+.kb-cal-more { font-size: .75rem; color: var(--kb-gray-500); }
+.kb-cal-list { display: flex; flex-direction: column; gap: 1rem; max-width: 46rem; }
+.kb-cal-list-date { font-size: .95rem; font-weight: 700; margin: 0 0 .4rem; color: var(--kb-night); }
+.kb-cal-row { padding: .6rem .75rem; font-size: .9rem; min-height: 44px; display: flex; align-items: center; gap: .5rem; margin-bottom: .35rem; }
+.kb-cal-people { list-style: none; margin: 0; padding: .5rem 1rem; }
+.kb-cal-people li { display: flex; align-items: center; gap: .6rem; padding: .35rem 0; }
+.kb-cal-people li > span:first-of-type { flex: 1; }
+.kb-cal-resp { font-size: .8rem; color: var(--kb-gray-500); }
+.kb-cal-resp-yes { color: #15803d; font-weight: 600; }
+.kb-cal-resp-no { color: #b42318; }
+@media (max-width: 767.98px) {
+    .kb-cal-month-day { min-height: 4.5rem; }
+    .kb-cal-chip .kb-cal-ev-time { display: none; }
+}
+.kb-ev-top-0 { top: 0px; }
+.kb-ev-top-1 { top: 12px; }
+.kb-ev-top-2 { top: 24px; }
+.kb-ev-top-3 { top: 36px; }
+.kb-ev-top-4 { top: 48px; }
+.kb-ev-top-5 { top: 60px; }
+.kb-ev-top-6 { top: 72px; }
+.kb-ev-top-7 { top: 84px; }
+.kb-ev-top-8 { top: 96px; }
+.kb-ev-top-9 { top: 108px; }
+.kb-ev-top-10 { top: 120px; }
+.kb-ev-top-11 { top: 132px; }
+.kb-ev-top-12 { top: 144px; }
+.kb-ev-top-13 { top: 156px; }
+.kb-ev-top-14 { top: 168px; }
+.kb-ev-top-15 { top: 180px; }
+.kb-ev-top-16 { top: 192px; }
+.kb-ev-top-17 { top: 204px; }
+.kb-ev-top-18 { top: 216px; }
+.kb-ev-top-19 { top: 228px; }
+.kb-ev-top-20 { top: 240px; }
+.kb-ev-top-21 { top: 252px; }
+.kb-ev-top-22 { top: 264px; }
+.kb-ev-top-23 { top: 276px; }
+.kb-ev-top-24 { top: 288px; }
+.kb-ev-top-25 { top: 300px; }
+.kb-ev-top-26 { top: 312px; }
+.kb-ev-top-27 { top: 324px; }
+.kb-ev-top-28 { top: 336px; }
+.kb-ev-top-29 { top: 348px; }
+.kb-ev-top-30 { top: 360px; }
+.kb-ev-top-31 { top: 372px; }
+.kb-ev-top-32 { top: 384px; }
+.kb-ev-top-33 { top: 396px; }
+.kb-ev-top-34 { top: 408px; }
+.kb-ev-top-35 { top: 420px; }
+.kb-ev-top-36 { top: 432px; }
+.kb-ev-top-37 { top: 444px; }
+.kb-ev-top-38 { top: 456px; }
+.kb-ev-top-39 { top: 468px; }
+.kb-ev-top-40 { top: 480px; }
+.kb-ev-top-41 { top: 492px; }
+.kb-ev-top-42 { top: 504px; }
+.kb-ev-top-43 { top: 516px; }
+.kb-ev-top-44 { top: 528px; }
+.kb-ev-top-45 { top: 540px; }
+.kb-ev-top-46 { top: 552px; }
+.kb-ev-top-47 { top: 564px; }
+.kb-ev-top-48 { top: 576px; }
+.kb-ev-top-49 { top: 588px; }
+.kb-ev-top-50 { top: 600px; }
+.kb-ev-top-51 { top: 612px; }
+.kb-ev-h-1 { height: 10px; }
+.kb-ev-h-2 { height: 22px; }
+.kb-ev-h-3 { height: 34px; }
+.kb-ev-h-4 { height: 46px; }
+.kb-ev-h-5 { height: 58px; }
+.kb-ev-h-6 { height: 70px; }
+.kb-ev-h-7 { height: 82px; }
+.kb-ev-h-8 { height: 94px; }
+.kb-ev-h-9 { height: 106px; }
+.kb-ev-h-10 { height: 118px; }
+.kb-ev-h-11 { height: 130px; }
+.kb-ev-h-12 { height: 142px; }
+.kb-ev-h-13 { height: 154px; }
+.kb-ev-h-14 { height: 166px; }
+.kb-ev-h-15 { height: 178px; }
+.kb-ev-h-16 { height: 190px; }
+.kb-ev-h-17 { height: 202px; }
+.kb-ev-h-18 { height: 214px; }
+.kb-ev-h-19 { height: 226px; }
+.kb-ev-h-20 { height: 238px; }
+.kb-ev-h-21 { height: 250px; }
+.kb-ev-h-22 { height: 262px; }
+.kb-ev-h-23 { height: 274px; }
+.kb-ev-h-24 { height: 286px; }
+.kb-ev-h-25 { height: 298px; }
+.kb-ev-h-26 { height: 310px; }
+.kb-ev-h-27 { height: 322px; }
+.kb-ev-h-28 { height: 334px; }
+.kb-ev-h-29 { height: 346px; }
+.kb-ev-h-30 { height: 358px; }
+.kb-ev-h-31 { height: 370px; }
+.kb-ev-h-32 { height: 382px; }
+.kb-ev-h-33 { height: 394px; }
+.kb-ev-h-34 { height: 406px; }
+.kb-ev-h-35 { height: 418px; }
+.kb-ev-h-36 { height: 430px; }
+.kb-ev-h-37 { height: 442px; }
+.kb-ev-h-38 { height: 454px; }
+.kb-ev-h-39 { height: 466px; }
+.kb-ev-h-40 { height: 478px; }
+.kb-ev-h-41 { height: 490px; }
+.kb-ev-h-42 { height: 502px; }
+.kb-ev-h-43 { height: 514px; }
+.kb-ev-h-44 { height: 526px; }
+.kb-ev-h-45 { height: 538px; }
+.kb-ev-h-46 { height: 550px; }
+.kb-ev-h-47 { height: 562px; }
+.kb-ev-h-48 { height: 574px; }
+.kb-ev-h-49 { height: 586px; }
+.kb-ev-h-50 { height: 598px; }
+.kb-ev-h-51 { height: 610px; }
+.kb-ev-h-52 { height: 622px; }
+.kb-cal-daycol .kb-ev-lane-0-1 { left: calc(0 * 100% / 1 + 2px); right: calc(0 * 100% / 1 + 2px); }
+.kb-cal-daycol .kb-ev-lane-0-2 { left: calc(0 * 100% / 2 + 2px); right: calc(1 * 100% / 2 + 2px); }
+.kb-cal-daycol .kb-ev-lane-1-2 { left: calc(1 * 100% / 2 + 2px); right: calc(0 * 100% / 2 + 2px); }
+.kb-cal-daycol .kb-ev-lane-0-3 { left: calc(0 * 100% / 3 + 2px); right: calc(2 * 100% / 3 + 2px); }
+.kb-cal-daycol .kb-ev-lane-1-3 { left: calc(1 * 100% / 3 + 2px); right: calc(1 * 100% / 3 + 2px); }
+.kb-cal-daycol .kb-ev-lane-2-3 { left: calc(2 * 100% / 3 + 2px); right: calc(0 * 100% / 3 + 2px); }
+.kb-cal-daycol .kb-ev-lane-0-4 { left: calc(0 * 100% / 4 + 2px); right: calc(3 * 100% / 4 + 2px); }
+.kb-cal-daycol .kb-ev-lane-1-4 { left: calc(1 * 100% / 4 + 2px); right: calc(2 * 100% / 4 + 2px); }
+.kb-cal-daycol .kb-ev-lane-2-4 { left: calc(2 * 100% / 4 + 2px); right: calc(1 * 100% / 4 + 2px); }
+.kb-cal-daycol .kb-ev-lane-3-4 { left: calc(3 * 100% / 4 + 2px); right: calc(0 * 100% / 4 + 2px); }

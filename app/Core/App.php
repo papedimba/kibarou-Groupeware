@@ -6,6 +6,8 @@ namespace App\Core;
 
 use App\Modules\Auth\AuthService;
 use App\Modules\Auth\PasswordResetService;
+use App\Modules\Calendar\EventRepository;
+use App\Modules\Calendar\EventService;
 use App\Modules\Chat\ChannelService;
 use App\Modules\Chat\ChatAttachmentService;
 use App\Modules\Chat\ChatRepository;
@@ -137,6 +139,11 @@ final class App
     public function chat(): ChatService
     {
         return $this->service(ChatService::class, fn () => new ChatService($this->db(), new ChatRepository($this->db()), $this->rbac(), $this->audit(), $this->notifier(), $this->chatAttachments()));
+    }
+
+    public function events(): EventService
+    {
+        return $this->service(EventService::class, fn () => new EventService($this->db(), new EventRepository($this->db()), $this->rbac(), $this->audit(), $this->notifier(), (string) $this->config['app']['timezone']));
     }
 
     public function channels(): ChannelService
