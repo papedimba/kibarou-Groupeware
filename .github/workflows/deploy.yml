@@ -1,0 +1,94 @@
+# Mise en ligne en un clic : onglet « Actions » › « Déployer » › « Run workflow » (choisir la branche).
+# Tests, construction sans outils de développement, envoi par SSH (rsync), puis migrations de la base.
+# Le .env et les fichiers des utilisateurs (storage/) du serveur ne sont jamais écrasés ni supprimés.
+# Secrets à créer dans Settings › Secrets and variables › Actions (voir docs/DEPLOYMENT.md §6 bis) :
+#   SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, SSH_KNOWN_HOSTS, DEPLOY_PATH ; facultatifs : SSH_PORT (22), PHP_BIN (php).
+name: Déployer
+
+on:
+  workflow_dispatch:
+
+# Jamais deux déploiements en même temps.
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: kibarou_test
+          MARIADB_USER: kibarou
+          MARIADB_PASSWORD: kibarou
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Vérifier PHP et ses extensions
+        run: |
+          php -v
+          php -m | grep -E '^(gd|zip|exif|fileinfo|mbstring|pdo_mysql|intl)$'
+          php -r 'exit(function_exists("imagewebp") ? 0 : 1);' || { echo "GD sans WebP"; exit 1; }
+
+      - name: Installer les dépendances (avec outils de test)
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Tests
+        run: vendor/bin/phpunit
+
+      - name: Construire le paquet de production
+        run: composer install --no-interaction --no-progress --prefer-dist --no-dev --optimize-autoloader
+
+      - name: Préparer la connexion SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          test -n "$SSH_PRIVATE_KEY" && test -n "$SSH_KNOWN_HOSTS" || { echo "Secrets SSH manquants (voir docs/DEPLOYMENT.md §6 bis)"; exit 1; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          # Empreinte du serveur fixée à l'avance : pas de connexion à un serveur usurpé.
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+
+      - name: Envoyer les fichiers
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          test -n "$SSH_HOST" && test -n "$SSH_USER" && test -n "$DEPLOY_PATH" || { echo "SSH_HOST, SSH_USER ou DEPLOY_PATH manquant"; exit 1; }
+          rsync -az --delete --itemize-changes \
+            -e "ssh -i ~/.ssh/deploy_key -p ${SSH_PORT:-22} -o StrictHostKeyChecking=yes" \
+            --exclude='/.env' --exclude='/.git/' --exclude='/.github/' --exclude='/tests/' --exclude='/docs/' \
+            --exclude='/.superpowers/' --exclude='/.phpunit.cache/' --exclude='/node_modules/' \
+            --include='/storage/' --include='/storage/*/' --include='/storage/*/.gitkeep' --exclude='/storage/**' \
+            ./ "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/" | tail -n 50
+
+      - name: Mettre à jour la base de données
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          PHP_BIN: ${{ secrets.PHP_BIN }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "${SSH_PORT:-22}" -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+            "cd '$DEPLOY_PATH' && test -f .env && '${PHP_BIN:-php}' bin/console migrate && '${PHP_BIN:-php}' bin/console cron:run"
+
+      - name: Effacer la clé
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

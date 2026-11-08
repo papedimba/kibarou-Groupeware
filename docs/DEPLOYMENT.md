@@ -71,6 +71,40 @@ Une seule entrée, toutes les 5 minutes **[à vérifier : syntaxe et chemin de P
 Elle envoie les emails en file et applique la politique de conservation. Si elle ne tourne pas depuis plus de
 30 minutes, le tableau de bord d'administration affiche une alerte.
 
+## 6 bis. Mise en ligne en un clic (GitHub Actions, SSH)
+
+Le bouton **Actions › Déployer › Run workflow** (fichier `.github/workflows/deploy.yml`) lance les tests, construit
+l'application sans les outils de développement, envoie les fichiers par SSH (`rsync`) puis exécute
+`bin/console migrate` et `cron:run` sur le serveur. Le `.env` et le contenu de `storage/` du serveur ne sont jamais
+écrasés ni supprimés. Si un test échoue, rien n'est envoyé.
+
+**Préparation, une seule fois :**
+1. **Première installation** faite à la main (§3 à §6) : base, `.env`, premier super administrateur, CRON.
+2. **Clé SSH dédiée au déploiement**, créée sur votre poste (jamais celle de votre compte personnel) :
+   `ssh-keygen -t ed25519 -C deploiement-kibarou -f kibarou_deploy` → ajouter `kibarou_deploy.pub` aux clés autorisées du
+   compte SSH dans le panneau Likuid.
+3. **Empreinte du serveur** : `ssh-keyscan -p <port> <hôte>` ; comparer avec l'empreinte affichée par Likuid avant de
+   l'utiliser.
+4. **Secrets GitHub** (Settings › Secrets and variables › Actions › New repository secret) — jamais dans un message ni
+   dans le code :
+
+| Secret | Contenu |
+|---|---|
+| `SSH_HOST` | Nom du serveur SSH Likuid |
+| `SSH_USER` | Identifiant SSH |
+| `SSH_PORT` | Port SSH (facultatif, 22 par défaut) |
+| `SSH_PRIVATE_KEY` | Contenu du fichier `kibarou_deploy` (clé privée) |
+| `SSH_KNOWN_HOSTS` | Résultat de `ssh-keyscan` (étape 3) |
+| `DEPLOY_PATH` | Dossier de l'application sur le serveur, ex. `/home/<compte>/kibarou-groupware` (celui qui contient `public/`) |
+| `PHP_BIN` | Commande PHP 8.2+ du serveur si `php` n'est pas la bonne version, ex. `/usr/local/bin/php8.2` (facultatif) |
+
+5. Le bouton n'apparaît dans l'onglet *Actions* que lorsque le fichier du workflow est sur la **branche principale** du dépôt.
+   Au moment du clic, choisir la branche à déployer.
+
+**En cas de problème** : le journal de l'exécution indique l'étape en échec (tests, connexion, envoi, migration).
+Pour revenir en arrière, relancer le bouton sur la version précédente (les migrations ne sont pas annulées : elles ne font
+qu'ajouter des tables ou des colonnes).
+
 ## 7. Mises à jour
 
 1. **Sauvegarder la base et les fichiers** (§8).
