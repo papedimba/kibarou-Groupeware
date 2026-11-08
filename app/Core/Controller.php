@@ -19,6 +19,7 @@ abstract class Controller
         $current = $this->app->auth()->user();
         $view->share('currentUser', $current);
         $view->share('unreadCount', $current !== null ? $this->app->notifier()->unreadCount((int) $current['id']) : 0);
+        $view->share('chatUnread', $current !== null && $this->app->rbac()->can($current, 'chat.use') ? (new \App\Modules\Chat\ChatRepository($this->app->db()))->unreadTotal((int) $current['id']) : 0);
         $view->share('lastNotificationId', $current !== null ? $this->app->notifier()->lastId((int) $current['id']) : 0);
         $view->share('flash', $session->getFlash('message'));
         $view->share('flashType', $session->getFlash('type', 'success'));

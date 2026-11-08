@@ -36,6 +36,9 @@ $nav = static function (string $path, string $icon, string $label) use ($current
         </a>
         <nav class="kb-nav">
             <?= $nav('/', 'house', 'Accueil') ?>
+            <?php if (can('chat.use')): ?>
+                <a href="<?= e(url('/chat')) ?>"<?= str_starts_with($currentPath, '/chat') ? ' class="active" aria-current="page"' : '' ?>><i data-lucide="message-square" aria-hidden="true"></i>Messagerie<?php $chatUnread ??= 0; ?><span class="kb-nav-badge" data-chat-badge<?= $chatUnread > 0 ? '' : ' hidden' ?>><?= $chatUnread > 99 ? '99+' : (int) $chatUnread ?></span><span class="visually-hidden" data-chat-badge-label><?= $chatUnread > 0 ? ', ' . (int) $chatUnread . ' non lu' . ($chatUnread > 1 ? 's' : '') : '' ?></span></a>
+            <?php endif; ?>
             <?php if (can('directory.view')): ?><?= $nav('/directory', 'contact', 'Annuaire') ?><?php endif; ?>
             <?= $nav('/profile', 'user', 'Mon profil') ?>
             <?php if (can('admin.access')): ?>

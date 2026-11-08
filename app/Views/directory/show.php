@@ -12,8 +12,8 @@ $tel = static fn (string $n): string => preg_replace('/[^0-9+]/', '', $n) ?? '';
             <div class="text-secondary"><?= e(implode(' · ', array_filter([$person['position_title'], $person['department_name']])) ?: 'Fonction non renseignée') ?></div>
         </div>
     </div>
-    <?php if ($chatEnabled): ?>
-        <a class="btn btn-primary" href="<?= e(url('/chat/new/' . (int) $person['id'])) ?>"><i data-lucide="message-square" aria-hidden="true"></i> Écrire</a>
+    <?php if ($chatEnabled && can('chat.use') && (int) $person['id'] !== (int) $currentUser['id']): ?>
+        <a class="btn btn-primary" href="<?= e(url('/chat/with/' . (int) $person['id'])) ?>"><i data-lucide="message-square" aria-hidden="true"></i> Écrire</a>
     <?php endif; ?>
 </div>
 <div class="row g-4">

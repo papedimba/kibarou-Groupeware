@@ -6,6 +6,7 @@ use App\Core\Router;
 use App\Modules\Admin\AdminController;
 use App\Modules\Auth\AuthController;
 use App\Modules\Dashboard\DashboardController;
+use App\Modules\Chat\ChatController;
 use App\Modules\Directory\DirectoryController;
 use App\Modules\Directory\PresenceController;
 use App\Modules\Install\InstallController;
@@ -57,6 +58,18 @@ return static function (Router $r): void {
             $r->post('/presence', [PresenceController::class, 'update']);
             $r->post('/presence/clear', [PresenceController::class, 'clear']);
             $r->post('/presence/team', [PresenceController::class, 'team']);
+        });
+
+        $r->group(['perm:chat.use'], static function (Router $r) {
+            $r->get('/chat', [ChatController::class, 'index']);
+            $r->get('/chat/new', [ChatController::class, 'newForm']);
+            $r->post('/chat/new', [ChatController::class, 'create']);
+            $r->get('/chat/with/{userId}', [ChatController::class, 'with']);
+            $r->get('/chat/{id}', [ChatController::class, 'show']);
+            $r->post('/chat/{id}', [ChatController::class, 'send']);
+            $r->post('/chat/{id}/members', [ChatController::class, 'addMembers']);
+            $r->post('/chat/{id}/rename', [ChatController::class, 'rename']);
+            $r->post('/chat/{id}/leave', [ChatController::class, 'leave']);
         });
 
         $r->group(['perm:admin.access'], static function (Router $r) {

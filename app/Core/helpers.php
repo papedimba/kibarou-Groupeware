@@ -129,6 +129,33 @@ function relative_time(string $utc): string
     };
 }
 
+/**
+ * Texte de message : échappé, retours à la ligne conservés, seuls les liens http(s) rendus cliquables.
+ * Le texte est échappé AVANT la détection des liens : rien de ce qu'écrit l'utilisateur n'est interprété.
+ */
+function linkify(string $text): string
+{
+    $html = preg_replace_callback('~\bhttps?://[^\s<]+~i', static function (array $m): string {
+        $url = rtrim($m[0], '.,;:!?)');
+        $rest = substr($m[0], strlen($url));
+        return '<a href="' . $url . '" target="_blank" rel="noopener noreferrer">' . $url . '</a>' . $rest;
+    }, e($text)) ?? e($text);
+    return nl2br($html, false);
+}
+
+/** Séparateur de jour des conversations : « Aujourd'hui », « Hier » ou la date. */
+function day_label(string $utc): string
+{
+    $tz = new DateTimeZone((string) App::instance()->config('app.timezone', 'UTC'));
+    $day = (new DateTimeImmutable($utc, new DateTimeZone('UTC')))->setTimezone($tz)->format('Y-m-d');
+    $today = new DateTimeImmutable('today', $tz);
+    return match ($day) {
+        $today->format('Y-m-d') => 'Aujourd\'hui',
+        $today->modify('-1 day')->format('Y-m-d') => 'Hier',
+        default => format_date($utc, 'd/m/Y'),
+    };
+}
+
 /** Date courante UTC au format SQL. */
 function now_utc(): string
 {
