@@ -68,4 +68,38 @@ final class NotificationCenterTest extends IntegrationTestCase
         $this->assertSame(0, $this->app->notifier()->unreadCount($me));
         $this->assertNull($this->app->db()->value('SELECT read_at FROM notifications WHERE id = ?', [$theirs]));
     }
+
+    public function testPreferencesSaveAndApply(): void
+    {
+        $me = $this->createUser('moi@kibarou.test');
+        $this->login('moi@kibarou.test', 'Motdepasse123');
+        $this->assertSame(200, $this->get('/profile/notifications')->status);
+        $this->assertRedirect($this->post('/profile/notifications', [
+            'email' => ['presence.changed' => 'immediate', 'account.enabled' => 'digest'],
+            'browser' => ['presence.changed' => '1'],
+        ]), '/profile/notifications');
+        $id = $this->notify($me, 'Statut');
+        $this->assertSame('queued', $this->app->db()->value('SELECT email_status FROM notifications WHERE id = ?', [$id]));
+        $prefs = $this->app->notifier()->preferences($me);
+        $this->assertSame('digest', $prefs['account.enabled']['email']);
+        $this->assertFalse($prefs['account.enabled']['browser']);
+    }
+
+    public function testMandatoryTypeCannotBeChanged(): void
+    {
+        $me = $this->createUser('moi@kibarou.test');
+        $this->login('moi@kibarou.test', 'Motdepasse123');
+        $this->post('/profile/notifications', ['email' => ['security.password_changed' => 'off']]);
+        $this->assertNull($this->app->db()->value("SELECT email FROM notification_preferences WHERE user_id = ? AND type = 'security.password_changed'", [$me]));
+        $this->assertStringContainsString('Alerte de sécurité, toujours envoyée par email', $this->get('/profile/notifications')->body);
+    }
+
+    public function testInvalidValueRejected(): void
+    {
+        $me = $this->createUser('moi@kibarou.test');
+        $this->login('moi@kibarou.test', 'Motdepasse123');
+        $this->post('/profile/notifications', ['email' => ['account.enabled' => 'sms', 'inconnu.type' => 'off']]);
+        $this->assertSame('immediate', $this->app->notifier()->preferences($me)['account.enabled']['email']);
+        $this->assertSame(0, (int) $this->app->db()->value("SELECT COUNT(*) FROM notification_preferences WHERE type = 'inconnu.type'"));
+    }
 }

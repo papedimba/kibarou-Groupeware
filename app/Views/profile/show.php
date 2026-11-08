@@ -4,7 +4,10 @@ $this->layout('layouts/app', ['title' => 'Mon profil', 'breadcrumbs' => [['Mon p
 ?>
 <div class="kb-page-title">
     <h1>Mon profil</h1>
-    <a class="btn btn-outline-primary" href="<?= e(url('/profile/password')) ?>"><i data-lucide="lock" aria-hidden="true"></i> Changer mon mot de passe</a>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary" href="<?= e(url('/profile/notifications')) ?>"><i data-lucide="bell" aria-hidden="true"></i> Notifications</a>
+        <a class="btn btn-outline-primary" href="<?= e(url('/profile/password')) ?>"><i data-lucide="lock" aria-hidden="true"></i> Changer mon mot de passe</a>
+    </div>
 </div>
 <div class="row g-4">
     <div class="col-lg-5">

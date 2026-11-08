@@ -31,6 +31,20 @@ final class NotificationsController extends Controller
         ]);
     }
 
+    public function preferences(Request $request): Response
+    {
+        return $this->view('notifications/preferences', [
+            'currentPath' => '/profile',
+            'prefs' => $this->app->notifier()->preferences((int) $this->user()['id']),
+        ]);
+    }
+
+    public function savePreferences(Request $request): Response
+    {
+        $this->app->notifier()->savePreferences((int) $this->user()['id'], $request->post);
+        return $this->redirect('/profile/notifications', 'Préférences enregistrées.');
+    }
+
     /** Marque lue puis ouvre la page concernée. Seul le destinataire y a accès. */
     public function open(Request $request): Response
     {

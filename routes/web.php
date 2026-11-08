@@ -36,6 +36,8 @@ return static function (Router $r): void {
         $r->get('/notifications', [NotificationsController::class, 'index']);
         $r->post('/notifications/read-all', [NotificationsController::class, 'readAll']);
         $r->post('/notifications/{id}/open', [NotificationsController::class, 'open']);
+        $r->get('/profile/notifications', [NotificationsController::class, 'preferences']);
+        $r->post('/profile/notifications', [NotificationsController::class, 'savePreferences']);
 
         $r->get('/profile', [ProfileController::class, 'show']);
         $r->post('/profile', [ProfileController::class, 'update']);

@@ -72,6 +72,27 @@ final class Notifier
         return $out;
     }
 
+    /**
+     * Enregistre les choix du formulaire. Valeur inconnue → choix actuel conservé ; types obligatoires jamais enregistrés.
+     * @param array<string,mixed> $input ['email' => [type => immediate|digest|off], 'browser' => [type => 1]]
+     */
+    public function savePreferences(int $userId, array $input): void
+    {
+        $current = $this->preferences($userId);
+        $email = is_array($input['email'] ?? null) ? $input['email'] : [];
+        $browser = is_array($input['browser'] ?? null) ? $input['browser'] : [];
+        foreach (NotificationTypes::all() as $type => $def) {
+            if ($def['mandatory']) {
+                continue;
+            }
+            $choice = $email[$type] ?? null;
+            $this->db->run(
+                'REPLACE INTO notification_preferences (user_id, type, email, browser) VALUES (?, ?, ?, ?)',
+                [$userId, $type, in_array($choice, ['immediate', 'digest', 'off'], true) ? $choice : $current[$type]['email'], isset($browser[$type]) ? 1 : 0],
+            );
+        }
+    }
+
     public function unreadCount(int $userId): int
     {
         return (int) $this->db->value('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read_at IS NULL', [$userId]);
