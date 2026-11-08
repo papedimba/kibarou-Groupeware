@@ -28,6 +28,19 @@ final class DirectoryController extends Controller
         ]);
     }
 
+    public function org(Request $request): Response
+    {
+        $tree = $this->repo()->orgTree();
+        $without = $this->repo()->withoutDepartment();
+        return $this->view('directory/org', [
+            'currentPath' => '/directory',
+            'tree' => $tree,
+            'without' => $without,
+            'statuses' => $this->app->presence()->current(array_map(static fn ($m) => (int) $m['id'], $this->repo()->members())),
+            'myDepartment' => (int) ($this->user()['department_id'] ?? 0),
+        ]);
+    }
+
     public function show(Request $request): Response
     {
         $person = $this->repo()->find($this->id($request)) ?? throw new HttpException(404);

@@ -153,4 +153,46 @@ final class DirectoryTest extends IntegrationTestCase
         $this->login('rh@kibarou.test', 'Motdepasse123');
         $this->assertStringContainsString(self::PERSONAL, $this->get("/admin/users/{$t['target']}")->body, 'visible avec users.manage');
     }
+
+    public function testOrgChartShowsHierarchyAndHeads(): void
+    {
+        $head = $this->createUser('chef@kibarou.test', ['collaborateur'], 'Motdepasse123', ['first_name' => 'Chef', 'last_name' => 'Travaux']);
+        $dg = $this->department('Direction générale');
+        $trv = $this->department('Travaux', $dg, $head);
+        $this->app->db()->update('users', ['department_id' => $trv], ['id' => $head]);
+        $this->createUser('agent@kibarou.test', ['collaborateur'], 'Motdepasse123', ['first_name' => 'Agent', 'last_name' => 'Terrain', 'department_id' => $trv]);
+        $this->login('agent@kibarou.test', 'Motdepasse123');
+        $body = $this->get('/directory/org')->body;
+        $dgPos = strpos($body, 'id="service-' . $dg . '"');
+        $trvPos = strpos($body, 'id="service-' . $trv . '"');
+        $this->assertNotFalse($dgPos);
+        $this->assertNotFalse($trvPos);
+        $this->assertGreaterThan($dgPos, $trvPos);
+        // Travaux est imbriqué : il apparaît avant la fermeture du bloc de la direction.
+        $this->assertLessThan(strrpos($body, '</details>'), $trvPos);
+        $section = substr($body, $trvPos, strpos($body, '</details>', $trvPos) - $trvPos);
+        $this->assertSame(1, substr_count($section, 'Chef Travaux'), 'responsable affiché une seule fois');
+        $this->assertStringContainsString('Agent Terrain', $section);
+        $this->assertMatchesRegularExpression('/<details[^>]*id="service-' . $trv . '"[^>]*data-mine/', $body);
+    }
+
+    public function testOrgChartGroupsPeopleWithoutService(): void
+    {
+        $this->createUser('seul@kibarou.test', ['collaborateur'], 'Motdepasse123', ['first_name' => 'Sans', 'last_name' => 'Rattachement']);
+        $this->login('seul@kibarou.test', 'Motdepasse123');
+        $body = $this->get('/directory/org')->body;
+        $pos = strpos($body, 'Sans service');
+        $this->assertNotFalse($pos);
+        $this->assertNotFalse(strpos($body, 'Sans Rattachement', $pos));
+    }
+
+    public function testEmptyLeafServiceIsHidden(): void
+    {
+        $empty = $this->department('Service fantôme');
+        $this->createUser('collab@kibarou.test');
+        $this->login('collab@kibarou.test', 'Motdepasse123');
+        $r = $this->get('/directory/org');
+        $this->assertSame(200, $r->status);
+        $this->assertStringNotContainsString('id="service-' . $empty . '"', $r->body);
+    }
 }

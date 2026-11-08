@@ -55,6 +55,53 @@ final class DirectoryRepository
         );
     }
 
+    /**
+     * Arbre des services actifs : responsable en tête (non répété parmi les membres), membres, sous-services.
+     * Un service sans responsable, sans membre et sans sous-service affiché est omis.
+     * @return list<array<string,mixed>>
+     */
+    public function orgTree(): array
+    {
+        $departments = $this->db->fetchAll('SELECT id, name, parent_id, manager_user_id FROM departments WHERE is_active = 1 ORDER BY name');
+        $people = [];
+        foreach ($this->members() as $m) {
+            $people[(int) $m['id']] = $m;
+        }
+        $nodes = [];
+        foreach ($departments as $d) {
+            $head = $d['manager_user_id'] !== null ? ($people[(int) $d['manager_user_id']] ?? null) : null;
+            $nodes[(int) $d['id']] = ['id' => (int) $d['id'], 'name' => $d['name'], 'parent_id' => $d['parent_id'], 'manager' => $head, 'members' => [], 'children' => []];
+        }
+        foreach ($people as $p) {
+            $dept = $p['department_id'] !== null ? (int) $p['department_id'] : null;
+            if ($dept !== null && isset($nodes[$dept]) && (int) $p['id'] !== (int) ($nodes[$dept]['manager']['id'] ?? 0)) {
+                $nodes[$dept]['members'][] = $p;
+            }
+        }
+        $build = function (?int $parent) use (&$build, $nodes): array {
+            $out = [];
+            foreach ($nodes as $n) {
+                // Parent inactif ou absent : le service remonte à la racine.
+                $nodeParent = $n['parent_id'] !== null && isset($nodes[(int) $n['parent_id']]) ? (int) $n['parent_id'] : null;
+                if ($nodeParent !== $parent) {
+                    continue;
+                }
+                $n['children'] = $build($n['id']);
+                if ($n['manager'] !== null || $n['members'] !== [] || $n['children'] !== []) {
+                    $out[] = $n;
+                }
+            }
+            return $out;
+        };
+        return $build(null);
+    }
+
+    /** @return list<array<string,mixed>> collaborateurs actifs sans service (ou rattachés à un service inactif) */
+    public function withoutDepartment(): array
+    {
+        return array_values(array_filter($this->members(), static fn ($m) => $m['department_id'] === null || $m['department_name'] === null));
+    }
+
     /** Responsable de P : son responsable hiérarchique direct, ou le responsable de son service. */
     public function isResponsable(int $actorId, int $targetId): bool
     {

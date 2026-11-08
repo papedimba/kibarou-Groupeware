@@ -40,6 +40,7 @@ return static function (Router $r): void {
 
         $r->group(['perm:directory.view'], static function (Router $r) {
             $r->get('/directory', [DirectoryController::class, 'index']);
+            $r->get('/directory/org', [DirectoryController::class, 'org']);
             $r->get('/directory/{id}', [DirectoryController::class, 'show']);
             $r->post('/presence', [PresenceController::class, 'update']);
             $r->post('/presence/clear', [PresenceController::class, 'clear']);

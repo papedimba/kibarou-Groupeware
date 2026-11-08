@@ -143,6 +143,13 @@
         sync();
     });
 
+    // Organigramme : sur téléphone, seul le service de l'utilisateur reste ouvert (sans JS, tout est ouvert).
+    if (window.matchMedia('(max-width: 767.98px)').matches) {
+        document.querySelectorAll('.kb-org details:not([data-mine])').forEach(function (d) {
+            if (!d.querySelector('[data-mine]')) { d.open = false; }
+        });
+    }
+
     // Soumission automatique des filtres : <select data-autosubmit>
     document.querySelectorAll('[data-autosubmit]').forEach(function (el) {
         el.addEventListener('change', function () { el.form.submit(); });
