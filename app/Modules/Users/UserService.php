@@ -26,12 +26,13 @@ final class UserService
         'first_name' => 'required|max:100',
         'last_name' => 'required|max:100',
         'phone' => 'phone|max:30',
+        'phone_personal' => 'phone|max:30',
         'department_id' => 'int',
         'position_id' => 'int',
         'manager_id' => 'int',
     ];
     private const LABELS = [
-        'email' => 'Email', 'first_name' => 'Prénom', 'last_name' => 'Nom', 'phone' => 'Téléphone',
+        'email' => 'Email', 'first_name' => 'Prénom', 'last_name' => 'Nom', 'phone' => 'Téléphone professionnel', 'phone_personal' => 'Téléphone personnel',
         'department_id' => 'Service', 'position_id' => 'Fonction', 'manager_id' => 'Responsable',
     ];
 

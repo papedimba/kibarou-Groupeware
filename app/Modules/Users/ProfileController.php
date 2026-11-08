@@ -27,11 +27,15 @@ final class ProfileController extends Controller
     {
         $user = $this->user();
         try {
-            $data = Validator::validate($request->post, ['phone' => 'phone|max:30'], ['phone' => 'Téléphone']);
+            $data = Validator::validate(
+                $request->post,
+                ['phone' => 'phone|max:30', 'phone_personal' => 'phone|max:30'],
+                ['phone' => 'Téléphone professionnel', 'phone_personal' => 'Téléphone personnel'],
+            );
         } catch (ValidationException $e) {
             return $this->back('/profile', $e->errors, $request->post);
         }
-        $this->app->db()->update('users', ['phone' => $data['phone'], 'updated_at' => now_utc()], ['id' => $user['id']]);
+        $this->app->db()->update('users', ['phone' => $data['phone'], 'phone_personal' => $data['phone_personal'], 'updated_at' => now_utc()], ['id' => $user['id']]);
         $this->app->audit()->log((int) $user['id'], 'profile.updated', 'user', (int) $user['id']);
         return $this->redirect('/profile', 'Profil mis à jour.');
     }

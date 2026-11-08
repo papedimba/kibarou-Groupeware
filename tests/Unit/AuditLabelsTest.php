@@ -50,7 +50,7 @@ final class AuditLabelsTest extends TestCase
 
     public function testDetailsUseFrenchFieldNames(): void
     {
-        $this->assertSame([['Champs modifiés', 'Téléphone, Nom']], AuditLabels::details('{"changes":["phone","last_name"]}'));
+        $this->assertSame([['Champs modifiés', 'Téléphone professionnel, Nom']], AuditLabels::details('{"changes":["phone","last_name"]}'));
         $this->assertSame([], AuditLabels::details('{"slug":"auditeur"}'));
     }
 }

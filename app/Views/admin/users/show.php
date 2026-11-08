@@ -40,7 +40,8 @@ $id = (int) $target['id'];
     <div class="col-lg-5">
         <div class="card"><div class="card-header">Informations</div><div class="card-body">
             <dl class="row mb-0">
-                <dt class="col-5">Téléphone</dt><dd class="col-7"><?= e($target['phone'] ?: '—') ?></dd>
+                <dt class="col-5">Téléphone professionnel</dt><dd class="col-7"><?= e($target['phone'] ?: '—') ?></dd>
+                <?php if (can('users.manage')): ?><dt class="col-5">Téléphone personnel</dt><dd class="col-7"><?= e($target['phone_personal'] ?: '—') ?></dd><?php endif; ?>
                 <dt class="col-5">Service</dt><dd class="col-7"><?= e($department['name'] ?? '—') ?></dd>
                 <dt class="col-5">Fonction</dt><dd class="col-7"><?= e($position['title'] ?? '—') ?></dd>
                 <dt class="col-5">Responsable</dt><dd class="col-7"><?= $manager ? e($manager['first_name'] . ' ' . $manager['last_name']) : '—' ?></dd>

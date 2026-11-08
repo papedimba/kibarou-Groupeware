@@ -63,4 +63,94 @@ final class DirectoryTest extends IntegrationTestCase
         $this->login('collab@kibarou.test', 'Motdepasse123');
         $this->assertStringContainsString('href="/directory"', $this->get('/')->body);
     }
+
+    private const PERSONAL = '+223 70 00 00 01';
+
+    /** @return array{target:int,manager:int,head:int,colleague:int,dept:int} */
+    private function team(): array
+    {
+        $manager = $this->createUser('manager@kibarou.test');
+        $head = $this->createUser('head@kibarou.test');
+        $dept = $this->department('Travaux', null, $head);
+        $target = $this->createUser('cible@kibarou.test', ['collaborateur'], 'Motdepasse123',
+            ['first_name' => 'Cible', 'last_name' => 'Agent', 'department_id' => $dept, 'manager_id' => $manager, 'phone_personal' => self::PERSONAL]);
+        $colleague = $this->createUser('collegue@kibarou.test', ['collaborateur'], 'Motdepasse123', ['department_id' => $dept]);
+        return compact('target', 'manager', 'head', 'colleague', 'dept');
+    }
+
+    private function seesPersonal(string $email, int $target, array $roles = []): bool
+    {
+        $this->cookies = [];
+        if ($roles !== []) {
+            $this->createUser($email, $roles);
+        }
+        $this->login($email, 'Motdepasse123');
+        $r = $this->get("/directory/$target");
+        $this->assertSame(200, $r->status);
+        return str_contains($r->body, self::PERSONAL);
+    }
+
+    public function testPersonalPhoneVisibility(): void
+    {
+        $t = $this->team();
+        $this->assertTrue($this->seesPersonal('cible@kibarou.test', $t['target']), 'la personne elle-même');
+        $this->assertTrue($this->seesPersonal('manager@kibarou.test', $t['target']), 'responsable hiérarchique');
+        $this->assertTrue($this->seesPersonal('head@kibarou.test', $t['target']), 'responsable du service');
+        $this->assertTrue($this->seesPersonal('rh@kibarou.test', $t['target'], ['admin']), 'administrateur');
+        $this->assertFalse($this->seesPersonal('collegue@kibarou.test', $t['target']), 'collègue du même service');
+        $this->assertFalse($this->seesPersonal('dir@kibarou.test', $t['target'], ['directeur']), 'directeur sans lien');
+    }
+
+    public function testResponsableRightsFollowOrganisation(): void
+    {
+        $t = $this->team();
+        $this->assertTrue($this->seesPersonal('head@kibarou.test', $t['target']));
+        $this->app->db()->update('departments', ['manager_user_id' => null], ['id' => $t['dept']]);
+        $this->assertFalse($this->seesPersonal('head@kibarou.test', $t['target']));
+    }
+
+    public function testDisabledOrUnknownProfileIs404(): void
+    {
+        $this->createUser('collab@kibarou.test');
+        $gone = $this->createUser('parti@kibarou.test', ['collaborateur'], 'Motdepasse123', ['status' => 'disabled']);
+        $this->login('collab@kibarou.test', 'Motdepasse123');
+        $this->assertSame(404, $this->get("/directory/$gone")->status);
+        $this->assertSame(404, $this->get('/directory/999999')->status);
+        $this->assertSame(200, $this->get('/directory/' . (int) $this->app->db()->value("SELECT id FROM users WHERE email = 'collab@kibarou.test'"))->status);
+    }
+
+    public function testWriteButtonHiddenWhileChatDisabled(): void
+    {
+        $t = $this->team();
+        $this->login('collegue@kibarou.test', 'Motdepasse123');
+        $r = $this->get("/directory/{$t['target']}");
+        $this->assertSame(200, $r->status);
+        $this->assertStringContainsString('Cible Agent', $r->body);
+        $this->assertStringNotContainsString('Écrire', $r->body);
+    }
+
+    public function testProfileSavesBothPhones(): void
+    {
+        $id = $this->createUser('moi@kibarou.test');
+        $this->login('moi@kibarou.test', 'Motdepasse123');
+        $this->assertRedirect($this->post('/profile', ['phone' => '+223 20 00 00 00', 'phone_personal' => '+223 76 00 00 00']), '/profile');
+        $row = $this->app->db()->fetch('SELECT phone, phone_personal FROM users WHERE id = ?', [$id]);
+        $this->assertSame(['phone' => '+223 20 00 00 00', 'phone_personal' => '+223 76 00 00 00'], $row);
+        $this->post('/profile', ['phone' => '+223 20 00 00 00', 'phone_personal' => 'abc']);
+        $this->assertStringContainsString('Téléphone personnel', $this->get('/profile')->body);
+        $this->assertSame('+223 76 00 00 00', $this->app->db()->value('SELECT phone_personal FROM users WHERE id = ?', [$id]));
+    }
+
+    public function testAdminPagesHidePersonalPhoneFromViewOnlyRoles(): void
+    {
+        $t = $this->team();
+        $this->app->db()->run("INSERT INTO role_permissions (role_id, permission_id) SELECT r.id, p.id FROM roles r JOIN permissions p WHERE r.slug = 'directeur' AND p.slug = 'admin.access'");
+        $this->createUser('dir@kibarou.test', ['directeur']);
+        $this->login('dir@kibarou.test', 'Motdepasse123');
+        $this->assertStringNotContainsString(self::PERSONAL, $this->get("/admin/users/{$t['target']}")->body);
+        $this->cookies = [];
+        $this->createUser('rh@kibarou.test', ['admin']);
+        $this->login('rh@kibarou.test', 'Motdepasse123');
+        $this->assertStringContainsString(self::PERSONAL, $this->get("/admin/users/{$t['target']}")->body, 'visible avec users.manage');
+    }
 }

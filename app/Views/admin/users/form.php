@@ -40,9 +40,15 @@ $select = static function (string $name, string $label, array $options, string $
                     <?= field_error($errors, 'email') ?>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label" for="phone">Téléphone</label>
+                    <label class="form-label" for="phone">Téléphone professionnel</label>
                     <input class="form-control<?= invalid($errors, 'phone') ?>" id="phone" name="phone" value="<?= e($val('phone')) ?>" maxlength="30">
                     <?= field_error($errors, 'phone') ?>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="phone_personal">Téléphone personnel</label>
+                    <input class="form-control<?= invalid($errors, 'phone_personal') ?>" id="phone_personal" name="phone_personal" value="<?= e($val('phone_personal')) ?>" maxlength="30" aria-describedby="phone-personal-help">
+                    <div id="phone-personal-help" class="form-text">Visible seulement des responsables et des administrateurs.</div>
+                    <?= field_error($errors, 'phone_personal') ?>
                 </div>
                 <div class="col-md-4"><?= $select('department_id', 'Service', $departments, 'name') ?></div>
                 <div class="col-md-4"><?= $select('position_id', 'Fonction', $positions, 'title') ?></div>

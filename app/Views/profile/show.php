@@ -18,12 +18,19 @@ $this->layout('layouts/app', ['title' => 'Mon profil', 'breadcrumbs' => [['Mon p
                 </dl>
                 <form method="post" action="<?= e(url('/profile')) ?>">
                     <?= csrf_field() ?>
-                    <label class="form-label" for="phone">Téléphone</label>
-                    <div class="input-group">
-                        <input class="form-control<?= invalid($errors, 'phone') ?>" id="phone" name="phone" value="<?= e($old['phone'] ?? $currentUser['phone']) ?>" autocomplete="tel">
-                        <button class="btn btn-primary" type="submit">Enregistrer</button>
+                    <div class="mb-3">
+                        <label class="form-label" for="phone">Téléphone professionnel</label>
+                        <input class="form-control<?= invalid($errors, 'phone') ?>" id="phone" name="phone" value="<?= e($old['phone'] ?? $currentUser['phone']) ?>" autocomplete="tel" aria-describedby="phone-help">
+                        <div id="phone-help" class="form-text">Visible de tous les collaborateurs dans l'annuaire.</div>
+                        <?= field_error($errors, 'phone') ?>
                     </div>
-                    <?= field_error($errors, 'phone') ?>
+                    <div class="mb-3">
+                        <label class="form-label" for="phone_personal">Téléphone personnel</label>
+                        <input class="form-control<?= invalid($errors, 'phone_personal') ?>" id="phone_personal" name="phone_personal" value="<?= e($old['phone_personal'] ?? $currentUser['phone_personal']) ?>" autocomplete="tel" aria-describedby="phone-personal-help">
+                        <div id="phone-personal-help" class="form-text">Visible seulement de vos responsables et des administrateurs, pour vous joindre en urgence.</div>
+                        <?= field_error($errors, 'phone_personal') ?>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Enregistrer</button>
                     <p class="form-text">Nom, email, service et fonction sont gérés par l'administration.</p>
                 </form>
             </div>

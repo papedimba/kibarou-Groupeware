@@ -38,7 +38,7 @@ final class AuditLabels
 
     private const DETAIL_KEYS = ['email' => 'Email', 'count' => 'Nombre', 'changes' => 'Champs modifiés', 'name' => 'Nom'];
 
-    private const FIELDS = ['email' => 'Email', 'first_name' => 'Prénom', 'last_name' => 'Nom', 'phone' => 'Téléphone',
+    private const FIELDS = ['email' => 'Email', 'first_name' => 'Prénom', 'last_name' => 'Nom', 'phone' => 'Téléphone professionnel', 'phone_personal' => 'Téléphone personnel',
         'department_id' => 'Service', 'position_id' => 'Fonction', 'manager_id' => 'Responsable'];
 
     /** Pour ces actions, user_id désigne le compte visé, pas l'auteur. */

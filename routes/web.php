@@ -39,6 +39,7 @@ return static function (Router $r): void {
 
         $r->group(['perm:directory.view'], static function (Router $r) {
             $r->get('/directory', [DirectoryController::class, 'index']);
+            $r->get('/directory/{id}', [DirectoryController::class, 'show']);
         });
 
         $r->group(['perm:admin.access'], static function (Router $r) {

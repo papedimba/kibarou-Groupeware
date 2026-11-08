@@ -181,3 +181,4 @@ body { background: var(--kb-gray-50); font-size: .9375rem; accent-color: var(--k
     .kb-hide-sm { display: none; }
     .kb-show-sm { display: inline; }
 }
+.kb-avatar-lg { width: 64px; height: 64px; font-size: 1.25rem; }
