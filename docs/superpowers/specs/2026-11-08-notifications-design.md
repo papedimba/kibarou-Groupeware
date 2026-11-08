@@ -1,6 +1,6 @@
 # Lot 3 — Notifications : conception
 
-Statut : rédigé le 08/11/2026, en attente de relecture et d'approbation.
+Statut : rédigé le 08/11/2026, relu par un constructeur indépendant, complété des réponses de l'utilisateur ; en attente d'approbation.
 Références : cahier des charges, module 8 ; `PRODUCT.md` ; `PLAN.md` (lot 3) ; file d'emails et tâche CRON du lot 1.
 
 ## 1. Intention
@@ -18,7 +18,8 @@ Prévenir chaque collaborateur de ce qui le concerne, au bon endroit et sans le 
 - 3 notifications branchées dès le lot 3 (§5.6).
 
 **Non-objectifs**
-- Notifications « push » navigateur fermé (Web Push, clés VAPID, service worker) : **lot 10**, avec l'application installable. Le modèle de données du lot 3 doit le permettre sans refonte.
+- Notifications « push » navigateur fermé (Web Push, clés VAPID, abonnements) : **lot 10**, avec l'application installable. Le modèle de données et le service worker du lot 3 doivent le permettre sans refonte.
+- Alertes sur iPhone : Safari ne les permet qu'à une application installée sur l'écran d'accueil → **lot 10**.
 - Notifications des modules futurs (lots 4 à 9) : chaque lot ajoute ses types au catalogue.
 - SMS, WhatsApp.
 - Envoi groupé par un administrateur (« message à tous ») : ce sont les annonces du lot 8.
@@ -100,6 +101,7 @@ Règle pour les lots suivants (documentée dans le catalogue) : immédiat par d�
 ### 5.5 Interrogation et alertes navigateur
 
 - `GET /api/notifications?since=<dernier id connu>` (authentifié, JSON) : `{"unread": N, "items": [{"id", "title", "url", "alert"}]}` — les notifications non lues plus récentes que `since`, 10 au plus ; `alert` vaut vrai si la préférence navigateur du type est active.
+- **Affichage des alertes (décision de l'utilisateur : PC et Android dès le lot 3)** : Chrome sur Android refuse `new Notification()` depuis une page ; les alertes passent donc par un **service worker d'affichage seulement**, `public/sw.js` (servi à `/sw.js`, portée `/`), qui ne fait qu'afficher (`registration.showNotification`) et gérer le clic (`notificationclick` : focalise un onglet de l'intranet ou ouvre l'URL interne). Pas de cache, pas de push, pas de clés au lot 3 ; le lot 10 enrichira ce même fichier. La politique de sécurité (CSP) gagne `worker-src 'self'`. Sans service worker disponible, repli sur `new Notification()` (PC). Sur iPhone non installé, le bouton d'activation est remplacé par le message « Sur iPhone, les alertes seront disponibles quand l'intranet pourra être installé sur l'écran d'accueil. ».
 - Le script de page appelle ce point toutes les **60 s**, uniquement quand l'onglet est visible, reprend immédiatement au retour sur l'onglet ; met à jour la pastille ; pour chaque item `alert`, affiche une notification système (titre = « Kibarou Groupware », corps = titre de la notification) si l'autorisation est accordée ; clic sur la notification système → ouvre l'URL.
 - **Les appels d'interrogation ne prolongent pas la session** : ils ne mettent pas à jour `last_activity_at` (sinon un poste laissé ouvert resterait connecté jusqu'à l'expiration absolue de 12 h, et la pastille « en ligne » serait faussée). Une session expirée → 401 JSON → le script s'arrête sans boucler.
 - Le premier chargement de page fournit le dernier id connu (pas d'alerte pour les notifications anciennes).
@@ -110,7 +112,10 @@ Règle pour les lots suivants (documentée dans le catalogue) : immédiat par d�
 |---|---|---|---|
 | Changement de son propre mot de passe (`AuthService::changePassword`) et réinitialisation (`PasswordResetService::reset`) | la personne | `security.password_changed` | « Votre mot de passe a été modifié » ; précision : « Si vous n'êtes pas à l'origine de ce changement, contactez immédiatement un administrateur. » |
 | Réactivation d'un compte (`UserService::setStatus` vers actif) | la personne | `account.enabled` | « Votre compte a été réactivé » |
-| Statut modifié par quelqu'un d'autre (`PresenceService`, y compris mise à jour groupée) | la personne | `presence.changed` | « Votre statut a été modifié par {Prénom Nom} : {libellé du statut} » ; lien `/profile` |
+| Statut modifié par quelqu'un d'autre (`PresenceService::set`, `bulkSet`) | la personne | `presence.changed` | « Votre statut a été modifié par {Prénom Nom} : {libellé du statut} » ; lien `/profile` |
+| Statut effacé par quelqu'un d'autre (`PresenceService::clear`) — *choix de conception* | la personne | `presence.changed` | « Votre statut a été effacé par {Prénom Nom} » ; lien `/profile` |
+
+**Changement imposé à la première connexion** (*choix de conception*) : quand `must_change_password` valait 1 (mot de passe temporaire remis par un administrateur), le changement termine l'activation du compte et **ne déclenche pas** l'alerte de sécurité, pour ne pas alarmer inutilement. Tout autre changement ou réinitialisation la déclenche toujours.
 
 Pour la réinitialisation par lien, la personne n'est pas connectée : seul l'email lui parvient immédiatement ; la notification l'attend dans l'intranet.
 
@@ -129,9 +134,9 @@ Dans `cron:run`, avant l'envoi de la file :
 
 ## 7. Critères de réussite
 
-- Un changement de mot de passe produit toujours un email immédiat, même si la personne a tout désactivé (test).
+- Un changement de mot de passe (hors première connexion imposée) produit toujours un email immédiat, même si la personne a tout désactivé (test).
 - Une notification de type `digest` n'apparaît qu'une fois dans un récapitulatif, et pas si elle a été lue (tests avec heure simulée).
 - Personne ne lit ni ne marque les notifications d'autrui (test).
 - L'interrogation ne prolonge pas la session et renvoie 401 une fois la session expirée (tests).
-- La cloche se met à jour sans rechargement et l'alerte navigateur s'affiche (test de fumée Playwright avec autorisation accordée).
+- La cloche se met à jour sans rechargement et l'alerte navigateur s'affiche via le service worker (test de fumée Playwright, Chromium, autorisation accordée).
 - Tous les tests existants restent verts ; détecteur Impeccable sans avertissement sur les nouvelles pages.
