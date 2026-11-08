@@ -77,6 +77,7 @@ try {
             $cleaned = (new Maintenance($app->db(), (array) $app->config('retention'), (array) $app->config('session'), $app->presence()->today()))->run();
             $cleaned['chat_orphans'] = $app->chatAttachments()->purgeOrphans();
             $cleaned['chat_departments'] = $app->channels()->syncDepartments();
+            $cleaned['reminders'] = (new \App\Modules\Calendar\ReminderService($app->db(), $app->notifier(), (string) $app->config('app.timezone')))->run(new DateTimeImmutable('now', new DateTimeZone('UTC')));
             $app->db()->run(
                 "INSERT INTO settings (`key`, `value`, updated_at) VALUES ('cron_last_run', ?, UTC_TIMESTAMP())
                  ON DUPLICATE KEY UPDATE `value` = VALUES(`value`), updated_at = VALUES(updated_at)",
