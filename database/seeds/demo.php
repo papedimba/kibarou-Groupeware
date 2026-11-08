@@ -66,6 +66,11 @@ $db->transaction(function () use ($db, $hash, $now, $app) {
         ['fatou.kone', 'office', null, null],
         ['mariam.cisse', 'leave', null, (new DateTimeImmutable($today))->modify('+5 days')->format('Y-m-d')],
     ];
+    // Notifications de démonstration (sans email : elles sont déjà « traitées »).
+    foreach ([['seydou.coulibaly', 'Votre statut a été modifié par Moussa Traoré : Sur chantier'], ['mariam.cisse', 'Votre compte a été réactivé']] as [$login, $title]) {
+        $db->insert('notifications', ['user_id' => $ids[$login], 'type' => str_contains($title, 'statut') ? 'presence.changed' : 'account.enabled',
+            'title' => $title, 'url' => '/profile', 'created_at' => $now, 'email_status' => 'digested']);
+    }
     foreach ($statuses as [$login, $status, $site, $until]) {
         $db->insert('user_presence', ['user_id' => $ids[$login], 'status' => $status, 'site_label' => $site, 'start_date' => $today,
             'until_date' => $until, 'set_by' => $ids[$login], 'updated_at' => $now]);

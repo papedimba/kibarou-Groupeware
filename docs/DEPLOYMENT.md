@@ -91,7 +91,7 @@ Elle envoie les emails en file et applique la politique de conservation. Si elle
 - [ ] Limites d'envoi : `upload_max_filesize` ≥ 6M et `post_max_size` ≥ 8M (fichier `public/.user.ini` fourni ; sinon à régler dans le panneau Likuid)
 - [ ] Extension GD avec prise en charge WebP active (photos de profil) ; sans elle, l'envoi de photo est refusé avec un message clair
 - [ ] Limites Likuid obtenues par écrit (CPU, processus, connexions SQL, requêtes/heure) et reportées dans PLAN.md
-- [ ] HTTPS actif, redirection HTTP → HTTPS effective, HSTS présent
+- [ ] HTTPS actif, redirection HTTP → HTTPS effective, HSTS présent (indispensable aussi aux alertes du navigateur et au service worker `/sw.js`)
 - [ ] `APP_ENV=production`, `APP_DEBUG=false`, `SESSION_SECURE=true`
 - [ ] `/.env`, `/composer.json`, `/storage/logs/`, `/database/` inaccessibles depuis le web (403/404)
 - [ ] Base créée en utf8mb4 avec un utilisateur aux droits limités à cette base

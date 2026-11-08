@@ -41,8 +41,8 @@ Légende : ✅ terminé et testé · 🔜 prochain · ⏳ planifié
 |---|---|---|
 | **1. Socle + authentification + administration** | Routeur, configuration, PDO, migrations, sessions en base, CSRF, en-têtes de sécurité, erreurs ; connexion, déconnexion, réinitialisation, limitation des tentatives, changement de mot de passe imposé ; utilisateurs, services, fonctions, rôles et permissions, sessions, audit, tableau de bord admin ; file d'emails + CRON ; installation CLI et web | ✅ |
 | 2. Annuaire + profil enrichi | Annuaire, fiche, organigramme par service, présence (statut déclaré + en ligne), deux téléphones, photo privée | ✅ |
-| 3. Notifications | Table `notifications`, préférences, centre de notifications, emails via la file, notifications navigateur | 🔜 |
-| 4. Messagerie | Conversations privées, groupes, salons, salons de service, pièces jointes privées, réactions, réponses, modification, suppression logique, lus/non lus, accusés, présence, indicateur de saisie, recherche, polling adaptatif | ⏳ |
+| 3. Notifications | Centrale, cloche, préférences, alertes navigateur PC/Android, emails immédiats et récapitulatif à 7 h | ✅ |
+| 4. Messagerie | Conversations privées, groupes, salons, salons de service, pièces jointes privées, réactions, réponses, modification, suppression logique, lus/non lus, accusés, présence, indicateur de saisie, recherche, polling adaptatif | 🔜 |
 | 5. Calendrier + réunions | Événements, participants, invitations, rappels CRON, récurrence (RRULE simplifiée), export ICS ; convocations, ordre du jour, comptes rendus, décisions, actions | ⏳ |
 | 6. Tâches + projets | Tâches, Kanban, commentaires, pièces jointes, historique ; projets, membres, jalons, progression | ⏳ |
 | 7. Documents | Dossiers, versions, permissions, corbeille, téléchargement sécurisé, recherche | ⏳ |
@@ -83,3 +83,8 @@ Ordre justifié : l'annuaire et les notifications sont des dépendances de la me
 - Livré : annuaire avec recherche instantanée (accents ignorés), fiche, organigramme par service, statut déclaré du jour (bureau, chantier, déplacement, congé, absent) avec mise à jour groupée par le responsable, pastille « en ligne », téléphones professionnel / personnel, photo de profil réencodée et privée, nettoyage nocturne.
 - Tests : 108 PHPUnit, test de fumée Playwright étendu ; détecteur Impeccable sans signalement sur les nouvelles pages.
 - À vérifier chez Likuid : extension GD avec WebP (checklist de mise en production).
+
+### Lot 3 — Notifications — 08/11/2026
+- Conception : `docs/superpowers/specs/2026-11-08-notifications-design.md` ; plan : `docs/superpowers/plans/2026-11-08-lot3-notifications.md`.
+- Livré : centrale d'envoi et catalogue des types, cloche et page « Mes notifications », préférences par type et par canal, interrogation passive toutes les 60 s, alertes navigateur sur PC et Android (service worker d'affichage), emails immédiats et récapitulatif quotidien à 7 h, branchements mot de passe / réactivation / statut, nettoyage.
+- Tests : 146 PHPUnit ; test de fumée Playwright sur Chromium complet (alerte réellement affichée) ; détecteur Impeccable sans signalement.

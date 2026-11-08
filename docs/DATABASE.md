@@ -59,6 +59,15 @@ Permissions livrées : `admin.access`, `users.view`, `users.manage`, `organizati
 
 « En ligne » n'est pas stocké : calculé depuis `sessions.last_activity_at` (moins de 5 minutes).
 
+## Lot 3 : notifications (migration 0004)
+
+| Table | Rôle |
+|---|---|
+| `notifications` | Une ligne par notification : destinataire, `type` (catalogue `NotificationTypes`), titre, précision, lien interne, auteur, `read_at`, `email_status` (none, queued, digest_pending, digested). Index `(user_id, read_at, id)` pour la cloche et l'interrogation |
+| `notification_preferences` | Choix par personne et par type : `email` (immediate, digest, off) et `browser` ; absence de ligne = valeurs par défaut du catalogue ; jamais de ligne pour un type obligatoire |
+
+`settings.digest_last_date` mémorise le dernier récapitulatif quotidien (jour local). Nettoyage : lues > 90 jours, toutes > 365 jours.
+
 ## Modèle prévu des lots suivants (analyse préalable)
 
 Tables listées dans le cahier des charges, avec les décisions de modélisation prises pour éviter les redondances :

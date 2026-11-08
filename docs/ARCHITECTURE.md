@@ -96,6 +96,12 @@ intervalles sont configurables.
 **Limites du polling** : latence de 3 à 30 s, coût proportionnel au nombre d'onglets ouverts, pas de notification
 quand le navigateur est fermé (les emails de la file prennent le relais).
 
+## 5 bis. Notifications (lot 3)
+
+- `Notifier::notify(userId, type, titre, lien, précision, auteur)` : appelée par les modules ; enregistre la notification et, selon la préférence effective, met un email en file (immédiat) ou le réserve au récapitulatif.
+- Interrogation : `GET /api/notifications?since=<id>` toutes les 60 s, onglet visible seulement ; met à jour la cloche ; les items `alert` sont affichés par le service worker d'affichage `/sw.js` (Android exige un service worker ; repli `new Notification` sur PC). Les appels `/api/*` sont passifs pour la session.
+- Ce même mécanisme d'interrogation servira de base à la messagerie (lot 4) ; le service worker sera enrichi au lot 10 (push, installation).
+
 ## 6. Tâches planifiées
 
 Une seule entrée CRON (toutes les 5 minutes) : `php bin/console cron:run`.

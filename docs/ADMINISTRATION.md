@@ -54,6 +54,13 @@ d'un utilisateur ferme ses sessions, pour que ses nouveaux droits s'appliquent t
 - **Téléphones** : le professionnel est visible de tous ; le personnel seulement de la personne, de ses responsables et des administrateurs.
 - **Photos** : chacun envoie la sienne depuis *Mon profil* ; un administrateur peut l'envoyer, la remplacer ou la retirer depuis la fiche utilisateur.
 
+## Notifications
+
+- **Cloche** (en haut à droite) : nombre de notifications non lues ; **Mes notifications** les liste, un clic ouvre la page concernée.
+- **Préférences** (*Mon profil › Notifications*) : pour chaque type, email immédiat, récapitulatif quotidien (7 h) ou pas d'email, et alerte du navigateur. L'alerte « Mot de passe modifié » est toujours envoyée par email.
+- **Alertes du navigateur** : sur PC et Android, quand l'intranet est ouvert (bouton « Activer les alertes du navigateur » dans les préférences). Sur iPhone : au lot 10, avec l'installation sur l'écran d'accueil.
+- Envoyées aujourd'hui : mot de passe modifié, compte réactivé, statut modifié ou effacé par un responsable.
+
 ## Surveillance
 L'**Accueil** d'un administrateur affiche des raccourcis et trois alertes : comptes pas encore connectés, échecs de connexion sur 24 h, emails en échec. **Administration › Vue d'ensemble** : utilisateurs actifs, connectés, échecs de connexion sur 24 h, emails en échec,
 et une alerte si la tâche CRON ne s'exécute plus. **Journal d'audit** : toutes les actions sensibles, en français, filtrables par type d'action.
