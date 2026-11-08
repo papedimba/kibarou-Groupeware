@@ -451,10 +451,10 @@ button.kb-msg-seen { min-height: 44px; margin: -.6rem 0; padding: 0 .25rem; text
 .kb-cal-nav { display: flex; gap: .4rem; }
 .kb-cal-nav .btn { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
 .kb-cal-views { margin-bottom: 0; border-bottom: 0; }
-.kb-cal-ev { display: block; text-decoration: none; color: var(--kb-night); background: var(--kb-blue-soft); border-radius: 6px; padding: .15rem .4rem; font-size: .8rem; line-height: 1.25; overflow: hidden; box-shadow: inset 3px 0 0 var(--kb-blue); }
+.kb-cal-ev { display: block; text-decoration: none; color: var(--kb-night); background: var(--kb-blue-soft); border-radius: 6px; padding: .15rem .4rem; font-size: .8rem; line-height: 1.25; overflow: hidden; border: 1px solid #b9cdf7; }
 .kb-cal-ev:hover { background: #d6e3ff; }
-.kb-cal-ev.is-pending { background: #fff; box-shadow: inset 3px 0 0 var(--kb-blue), inset 0 0 0 1px #c7d6f8; }
-.kb-cal-ev.is-declined, .kb-cal-ev.is-cancelled { background: var(--kb-gray-50); color: var(--kb-gray-500); box-shadow: inset 3px 0 0 var(--kb-gray-200); }
+.kb-cal-ev.is-pending { background: #fff; border-style: dashed; border-color: #7f9fe6; }
+.kb-cal-ev.is-declined, .kb-cal-ev.is-cancelled { background: var(--kb-gray-50); color: var(--kb-gray-500); border-color: var(--kb-gray-200); }
 .kb-cal-ev.is-cancelled .kb-cal-ev-title { text-decoration: line-through; }
 .kb-cal-ev-time { font-weight: 700; margin-right: .25rem; }
 .kb-cal-week { background: #fff; border: 1px solid var(--kb-gray-200); border-radius: 12px; overflow-x: auto; }
