@@ -3,6 +3,7 @@
 // Usage : KB_URL=http://127.0.0.1:8080 KB_EMAIL=... KB_PASSWORD=... node tests/e2e/smoke.js
 const { chromium, devices } = require('playwright');
 const assert = require('assert');
+const { execFileSync } = require('child_process');
 
 
 // Cibles tactiles visibles < 44 px de haut (cases à cocher couvertes par leur ligne .kb-check-row ;
@@ -48,8 +49,11 @@ async function minBorderContrast(p, selector) {
 
 (async () => {
   const base = process.env.KB_URL || 'http://127.0.0.1:8080';
-  const browser = await chromium.launch();
-  const page = await (await browser.newContext({ viewport: { width: 1366, height: 820 } })).newPage();
+  // Chromium complet (et non le « headless shell ») : seul capable d'afficher les notifications.
+  const browser = await chromium.launch({ channel: 'chromium' });
+  const desktop = await browser.newContext({ viewport: { width: 1366, height: 820 } });
+  await desktop.grantPermissions(['notifications'], { origin: base });
+  const page = await desktop.newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error') problems.push(m.text()); });
   page.on('pageerror', e => problems.push(e.message));
@@ -148,6 +152,23 @@ async function minBorderContrast(p, selector) {
   await page.waitForNavigation();
   await page.unroute('**/reset-link');
   assert.match(await page.locator('.alert').first().innerText(), /réinitialisation/, 'Confirmer envoie le formulaire');
+
+  // Lot 3 : la cloche se met à jour sans rechargement et l'alerte passe par le service worker.
+  await page.goto(base + '/');
+  await page.waitForFunction(async () => !!(await navigator.serviceWorker.getRegistration()), null, { timeout: 10000 });
+  const title = 'Smoke ' + Date.now();
+  execFileSync('php', ['-r', `require 'vendor/autoload.php'; $a = App\\Core\\App::boot(getcwd());
+    $id = (int) $a->db()->value('SELECT id FROM users WHERE email = ?', [getenv('KB_EMAIL')]);
+    $a->notifier()->notify($id, 'presence.changed', getenv('KB_TITLE'), '/profile');`], { env: { ...process.env, KB_TITLE: title } });
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await page.waitForFunction(() => !document.querySelector('[data-unread-badge]').hidden, null, { timeout: 10000 });
+  // waitForFunction ne sait pas attendre une condition asynchrone : boucle explicite.
+  let shown = false;
+  for (let i = 0; i < 20 && !shown; i++) {
+    shown = await page.evaluate(async t => (await (await navigator.serviceWorker.ready).getNotifications()).some(n => n.body.includes(t)), title);
+    if (!shown) await page.waitForTimeout(500);
+  }
+  assert.ok(shown, 'alerte affichée par le service worker');
 
   assert.deepStrictEqual(problems, [], 'aucune erreur console (CSP incluse)');
   await browser.close();

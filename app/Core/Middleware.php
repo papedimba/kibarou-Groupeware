@@ -75,6 +75,10 @@ final class Middleware
             throw new HttpException(401);
         }
         if ((int) $user['must_change_password'] === 1 && !in_array($request->path, self::PASSWORD_CHANGE_ALLOWED, true)) {
+            // Un appel JSON reçoit un refus clair plutôt qu'une redirection vers une page HTML.
+            if ($request->wantsJson()) {
+                throw new HttpException(403, 'Changez votre mot de passe pour continuer.');
+            }
             throw new RedirectException(url('/profile/password'));
         }
     }

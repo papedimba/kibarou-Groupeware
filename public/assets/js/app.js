@@ -152,6 +152,63 @@
         });
     }
 
+    // Notifications : interrogation toutes les 60 s (onglet visible seulement), cloche et alertes navigateur.
+    var bell = document.querySelector('[data-bell]');
+    var registration = null;
+    var isIos = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.navigator.standalone;
+    if ('serviceWorker' in navigator && !isIos) {
+        navigator.serviceWorker.register('/sw.js').then(function (r) { registration = r; }).catch(function () { registration = null; });
+    }
+    function alertUser(item) {
+        if (!('Notification' in window) || Notification.permission !== 'granted') { return; }
+        var options = { body: item.title, data: { url: item.url || '/notifications' }, tag: 'kb-' + item.id };
+        if (registration) { registration.showNotification('Kibarou Groupware', options); return; }
+        try {
+            var n = new Notification('Kibarou Groupware', options);
+            n.onclick = function () { window.focus(); window.location.href = options.data.url; };
+        } catch (e) { /* navigateur sans prise en charge : la cloche suffit */ }
+    }
+    if (bell) {
+        var badge = bell.querySelector('[data-unread-badge]');
+        var lastId = parseInt(document.body.getAttribute('data-last-id') || '0', 10);
+        var timer = null, stopped = false;
+        var poll = function () {
+            if (stopped || document.hidden) { return; }
+            fetch('/api/notifications?since=' + lastId, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+                .then(function (r) {
+                    if (r.status === 401 || r.status === 403) { stopped = true; clearInterval(timer); return null; }
+                    return r.ok ? r.json() : null;
+                })
+                .then(function (data) {
+                    if (!data) { return; }
+                    badge.textContent = data.unread > 99 ? '99+' : String(data.unread);
+                    badge.hidden = data.unread === 0;
+                    bell.setAttribute('aria-label', 'Notifications, ' + data.unread + ' non lue' + (data.unread > 1 ? 's' : ''));
+                    data.items.forEach(function (item) {
+                        lastId = Math.max(lastId, item.id);
+                        if (item.alert) { alertUser(item); }
+                    });
+                })
+                .catch(function () { /* réseau faible : nouvel essai au prochain passage */ });
+        };
+        timer = setInterval(poll, 60000);
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) { poll(); } });
+    }
+
+    // Préférences : activation des alertes du navigateur.
+    document.querySelectorAll('[data-enable-alerts]').forEach(function (btn) {
+        var status = document.querySelector('[data-alerts-status]');
+        var say = function (t) { if (status) { status.textContent = t; } };
+        if (isIos) { btn.hidden = true; say('Sur iPhone, les alertes seront disponibles quand l\'intranet pourra être installé sur l\'écran d\'accueil.'); return; }
+        if (!('Notification' in window)) { btn.hidden = true; say('Ce navigateur ne prend pas en charge les alertes.'); return; }
+        var show = function () {
+            if (Notification.permission === 'granted') { btn.hidden = true; say('Les alertes sont activées sur cet appareil.'); }
+            else if (Notification.permission === 'denied') { btn.hidden = true; say('Les alertes sont bloquées dans les réglages de ce navigateur pour ce site.'); }
+        };
+        show();
+        btn.addEventListener('click', function () { Notification.requestPermission().then(show); });
+    });
+
     // Soumission automatique des filtres : <select data-autosubmit>
     document.querySelectorAll('[data-autosubmit]').forEach(function (el) {
         el.addEventListener('change', function () { el.form.submit(); });

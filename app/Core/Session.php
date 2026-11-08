@@ -22,14 +22,17 @@ final class Session
     private bool $destroyed = false;
     private string $ip = '';
     private string $userAgent = '';
+    /** Appel d'arrière-plan (interrogation) : ne prolonge pas la session, ne consomme pas les messages flash. */
+    private bool $passive = false;
 
     /** @param array{cookie:string,secure:bool,idle_minutes:int,absolute_hours:int} $config */
     public function __construct(private readonly Database $db, private readonly array $config)
     {
     }
 
-    public function start(Request $request): void
+    public function start(Request $request, bool $passive = false): void
     {
+        $this->passive = $passive;
         $this->ip = $request->ip();
         $this->userAgent = $request->userAgent();
         $token = $request->cookies[$this->config['cookie']] ?? '';
@@ -47,6 +50,9 @@ final class Session
                 $this->lastActivity = (string) $row['last_activity_at'];
                 $this->exists = true;
             }
+        }
+        if ($passive) {
+            return;
         }
         // Les messages flash ne survivent qu'à une requête.
         $this->data['_flash_old'] = $this->data['_flash'] ?? [];
@@ -183,7 +189,7 @@ final class Session
             $response->withCookie($cookie, '', $this->cookieOptions(time() - 3600));
             return;
         }
-        if (!$this->exists && !$this->dirty) {
+        if ((!$this->exists && !$this->dirty) || ($this->passive && !$this->dirty)) {
             return;
         }
         $payload = $this->data;

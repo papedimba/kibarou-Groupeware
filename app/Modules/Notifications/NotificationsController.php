@@ -31,6 +31,26 @@ final class NotificationsController extends Controller
         ]);
     }
 
+    /** Interrogation légère : non-lues plus récentes que ?since=, au plus 10. */
+    public function poll(Request $request): Response
+    {
+        $userId = (int) $this->user()['id'];
+        $prefs = $this->app->notifier()->preferences($userId);
+        $rows = $this->app->db()->fetchAll(
+            'SELECT id, type, title, url FROM notifications WHERE user_id = ? AND read_at IS NULL AND id > ? ORDER BY id LIMIT 10',
+            [$userId, max(0, $request->int('since'))],
+        );
+        return Response::json([
+            'unread' => $this->app->notifier()->unreadCount($userId),
+            'items' => array_map(static fn ($r) => [
+                'id' => (int) $r['id'],
+                'title' => (string) $r['title'],
+                'url' => $r['url'],
+                'alert' => (bool) ($prefs[$r['type']]['browser'] ?? false),
+            ], $rows),
+        ]);
+    }
+
     public function preferences(Request $request): Response
     {
         return $this->view('notifications/preferences', [

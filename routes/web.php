@@ -34,6 +34,7 @@ return static function (Router $r): void {
         $r->get('/', [DashboardController::class, 'index']);
 
         $r->get('/notifications', [NotificationsController::class, 'index']);
+        $r->get('/api/notifications', [NotificationsController::class, 'poll']);
         $r->post('/notifications/read-all', [NotificationsController::class, 'readAll']);
         $r->post('/notifications/{id}/open', [NotificationsController::class, 'open']);
         $r->get('/profile/notifications', [NotificationsController::class, 'preferences']);

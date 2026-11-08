@@ -163,7 +163,7 @@ final class App
             // Session démarrée avant le routage, pour qu'une URL inconnue s'affiche dans l'interface.
             // L'installateur tourne avant que la table des sessions n'existe.
             if ($request->path !== '/install') {
-                $this->session()->start($request);
+                $this->session()->start($request, str_starts_with($request->path, '/api/'));
             }
             $route = $router->match($request->method, $request->path);
             $request->params = $route['params'];
