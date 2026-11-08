@@ -6,6 +6,7 @@ namespace App\Core;
 
 use App\Modules\Auth\AuthService;
 use App\Modules\Auth\PasswordResetService;
+use App\Modules\Chat\ChatAttachmentService;
 use App\Modules\Chat\ChatRepository;
 use App\Modules\Chat\ChatService;
 use App\Modules\Directory\AvatarService;
@@ -135,6 +136,11 @@ final class App
     public function chat(): ChatService
     {
         return $this->service(ChatService::class, fn () => new ChatService($this->db(), new ChatRepository($this->db()), $this->rbac(), $this->audit(), $this->notifier()));
+    }
+
+    public function chatAttachments(): ChatAttachmentService
+    {
+        return $this->service(ChatAttachmentService::class, fn () => new ChatAttachmentService($this->db(), $this->config['paths']['storage'] . '/private'));
     }
 
     public function avatars(): AvatarService
