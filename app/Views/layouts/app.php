@@ -25,7 +25,7 @@ $nav = static function (string $path, string $icon, string $label) use ($current
     <link rel="stylesheet" href="<?= e(asset('vendor/bootstrap/bootstrap.min.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>">
 </head>
-<body>
+<body data-last-id="<?= (int) ($lastNotificationId ?? 0) ?>">
 <a class="skip-link" href="#contenu">Aller au contenu</a>
 <div class="kb-shell">
     <aside class="kb-sidebar" id="kb-sidebar" aria-label="Navigation principale">
@@ -70,6 +70,11 @@ $nav = static function (string $path, string $icon, string $label) use ($current
                 </ol>
             </nav>
             <div class="ms-auto d-flex align-items-center gap-2">
+                <?php $unreadCount ??= 0; ?>
+                <a class="btn btn-light kb-bell" href="<?= e(url('/notifications')) ?>" aria-label="Notifications, <?= (int) $unreadCount ?> non lue<?= $unreadCount > 1 ? 's' : '' ?>" data-bell>
+                    <i data-lucide="bell" aria-hidden="true"></i>
+                    <span class="kb-bell-badge" data-unread-badge<?= $unreadCount > 0 ? '' : ' hidden' ?>><?= $unreadCount > 99 ? '99+' : (int) $unreadCount ?></span>
+                </a>
                 <div class="dropdown">
                     <button class="btn btn-link text-decoration-none text-body d-flex align-items-center gap-2 p-1" data-bs-toggle="dropdown" aria-expanded="false">
                         <?= avatar($currentUser) ?>

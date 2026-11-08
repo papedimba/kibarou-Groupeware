@@ -9,6 +9,7 @@ use App\Modules\Dashboard\DashboardController;
 use App\Modules\Directory\DirectoryController;
 use App\Modules\Directory\PresenceController;
 use App\Modules\Install\InstallController;
+use App\Modules\Notifications\NotificationsController;
 use App\Modules\Organization\OrganizationController;
 use App\Modules\Roles\RolesController;
 use App\Modules\Users\ProfileController;
@@ -31,6 +32,10 @@ return static function (Router $r): void {
     $r->group(['auth'], static function (Router $r) {
         $r->post('/logout', [AuthController::class, 'logout']);
         $r->get('/', [DashboardController::class, 'index']);
+
+        $r->get('/notifications', [NotificationsController::class, 'index']);
+        $r->post('/notifications/read-all', [NotificationsController::class, 'readAll']);
+        $r->post('/notifications/{id}/open', [NotificationsController::class, 'open']);
 
         $r->get('/profile', [ProfileController::class, 'show']);
         $r->post('/profile', [ProfileController::class, 'update']);

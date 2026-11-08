@@ -41,4 +41,12 @@ final class HelpersTest extends TestCase
         $this->assertStringContainsString('/directory/7/photo?v=7-abc', $html);
         $this->assertStringContainsString('<img', $html);
     }
+
+    public function testRelativeTime(): void
+    {
+        $this->assertSame('à l\'instant', relative_time(gmdate('Y-m-d H:i:s', time() - 20)));
+        $this->assertSame('il y a 5 min', relative_time(gmdate('Y-m-d H:i:s', time() - 300)));
+        $this->assertSame('hier', relative_time(gmdate('Y-m-d 12:00:00', strtotime('-1 day'))));
+        $this->assertSame('01/02/2026', relative_time('2026-02-01 10:00:00'));
+    }
 }

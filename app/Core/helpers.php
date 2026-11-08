@@ -113,6 +113,22 @@ function avatar(array $user, string $class = ''): string
     return '<span class="' . e($classes) . '" aria-hidden="true">' . e(initials((string) $user['first_name'], (string) $user['last_name'])) . '</span>';
 }
 
+/** Date relative simple pour les listes : « à l'instant », « il y a 5 min », « il y a 3 h », « hier », puis la date. */
+function relative_time(string $utc): string
+{
+    $tz = new DateTimeZone((string) App::instance()->config('app.timezone', 'UTC'));
+    $then = (new DateTimeImmutable($utc, new DateTimeZone('UTC')))->setTimezone($tz);
+    $now = new DateTimeImmutable('now', $tz);
+    $seconds = $now->getTimestamp() - $then->getTimestamp();
+    return match (true) {
+        $seconds < 60 => 'à l\'instant',
+        $seconds < 3600 => 'il y a ' . intdiv($seconds, 60) . ' min',
+        $then->format('Y-m-d') === $now->format('Y-m-d') => 'il y a ' . intdiv($seconds, 3600) . ' h',
+        $then->format('Y-m-d') === $now->modify('-1 day')->format('Y-m-d') => 'hier',
+        default => $then->format('d/m/Y'),
+    };
+}
+
 /** Date courante UTC au format SQL. */
 function now_utc(): string
 {
