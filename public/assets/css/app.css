@@ -301,3 +301,9 @@ a.kb-chat-sub { color: var(--kb-blue); padding: .2rem 0; }
     .kb-msg { max-width: 85%; }
     .kb-chat-compose { padding-bottom: max(.75rem, env(safe-area-inset-bottom)); }
 }
+.kb-msg.is-pending .kb-msg-bubble { opacity: .7; }
+.kb-msg.is-failed .kb-msg-bubble { background: #fff; color: var(--kb-text); border-color: #b42318; }
+.kb-msg.is-failed .kb-msg-time { color: #b42318; font-weight: 600; }
+.kb-msg-retry { background: none; border: 0; padding: .6rem .25rem; color: #b42318; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+.kb-msg-more { align-self: center; }
+.kb-msg-more .btn { min-height: 44px; }

@@ -129,5 +129,6 @@ $nav = static function (string $path, string $icon, string $label) use ($current
 <script src="<?= e(asset('vendor/bootstrap/bootstrap.bundle.min.js')) ?>"></script>
 <script src="<?= e(asset('vendor/lucide/lucide.min.js')) ?>"></script>
 <script src="<?= e(asset('js/app.js')) ?>"></script>
+<?php if (str_starts_with($currentPath, '/chat')): ?><script src="<?= e(asset('js/chat.js')) ?>"></script><?php endif; ?>
 </body>
 </html>

@@ -42,6 +42,7 @@ final class NotificationsController extends Controller
         );
         return Response::json([
             'unread' => $this->app->notifier()->unreadCount($userId),
+            'chat_unread' => $this->app->rbac()->can($this->user(), 'chat.use') ? (new \App\Modules\Chat\ChatRepository($this->app->db()))->unreadTotal($userId) : 0,
             'items' => array_map(static fn ($r) => [
                 'id' => (int) $r['id'],
                 'title' => (string) $r['title'],

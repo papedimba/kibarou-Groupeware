@@ -165,6 +165,16 @@ final class App
         unset($this->services[Session::class], $this->services[AuthService::class], $this->services[Rbac::class], $this->services[PresenceService::class], $this->services[ChatService::class]);
     }
 
+    /**
+     * Requêtes automatiques (interrogation, accusé de lecture sans interaction) : elles ne prolongent pas
+     * la session et ne consomment pas les messages flash, sinon une page ouverte garderait la session vivante.
+     */
+    private static function isPassive(Request $request): bool
+    {
+        return ($request->method === 'GET' && str_starts_with($request->path, '/api/'))
+            || ($request->method === 'POST' && preg_match('#^/api/chat/conversations/\d+/read$#', $request->path) === 1 && (string) $request->input('active', '') !== '1');
+    }
+
     public function handle(Request $request, Router $router): Response
     {
         $this->resetRequestState();
@@ -173,7 +183,7 @@ final class App
             // Session démarrée avant le routage, pour qu'une URL inconnue s'affiche dans l'interface.
             // L'installateur tourne avant que la table des sessions n'existe.
             if ($request->path !== '/install') {
-                $this->session()->start($request, str_starts_with($request->path, '/api/'));
+                $this->session()->start($request, self::isPassive($request));
             }
             $route = $router->match($request->method, $request->path);
             $request->params = $route['params'];

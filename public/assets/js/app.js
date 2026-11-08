@@ -60,8 +60,18 @@
         confirmEl.addEventListener('hidden.bs.modal', function () { pendingForm = null; });
     }
 
+    // Compteur de messages non lus du menu « Messagerie » (aussi appelé par chat.js).
+    var setChatBadge = window.kbSetChatBadge = function (n) {
+        var el = document.querySelector('[data-chat-badge]'), label = document.querySelector('[data-chat-badge-label]');
+        if (!el) { return; }
+        el.textContent = n > 99 ? '99+' : String(n);
+        el.hidden = n === 0;
+        if (label) { label.textContent = n > 0 ? ', ' + n + ' non lu' + (n > 1 ? 's' : '') : ''; }
+    };
+
     // Anti double envoi (réseau de chantier lent) : le bouton est désactivé après le premier envoi.
-    document.querySelectorAll('form').forEach(function (form) {
+    // Le formulaire de la messagerie gère lui-même ses envois (chat.js).
+    document.querySelectorAll('form:not([data-chat-form])').forEach(function (form) {
         form.addEventListener('submit', function (event) {
             if (event.defaultPrevented) { return; }
             if (form.dataset.sending === '1') { event.preventDefault(); return; }
@@ -164,7 +174,15 @@
     function alertUser(item) {
         if (!('Notification' in window) || Notification.permission !== 'granted') { return; }
         var options = { body: item.title, data: { url: item.url || base + 'notifications' }, tag: 'kb-' + item.id };
-        if (registration) { registration.showNotification('Kibarou Groupware', options); return; }
+        // L'enregistrement du service worker peut ne pas être encore résolu : on le redemande plutôt que
+        // de retomber sur new Notification(), refusé par Chrome Android (alerte alors perdue).
+        var pending = registration ? Promise.resolve(registration)
+            : ('serviceWorker' in navigator && !isIos ? navigator.serviceWorker.getRegistration(base).catch(function () { return null; }) : Promise.resolve(null));
+        pending.then(function (r) {
+            if (r) { r.showNotification('Kibarou Groupware', options); } else { pageAlert(options); }
+        });
+    }
+    function pageAlert(options) {
         try {
             var n = new Notification('Kibarou Groupware', options);
             n.onclick = function () { window.focus(); window.location.href = options.data.url; };
@@ -186,6 +204,7 @@
                     badge.textContent = data.unread > 99 ? '99+' : String(data.unread);
                     badge.hidden = data.unread === 0;
                     bell.setAttribute('aria-label', 'Notifications, ' + data.unread + ' non lue' + (data.unread > 1 ? 's' : ''));
+                    if (typeof data.chat_unread === 'number') { setChatBadge(data.chat_unread); }
                     data.items.forEach(function (item) {
                         lastId = Math.max(lastId, item.id);
                         if (item.alert) { alertUser(item); }

@@ -8,7 +8,8 @@ $title = $conversation !== null ? (string) $conversation['title'] : 'Messagerie'
 $this->layout('layouts/app', ['title' => $title, 'breadcrumbs' => $conversation !== null ? [['Messagerie', '/chat'], [$title, null]] : [['Messagerie', null]]]);
 $me = (int) $currentUser['id'];
 ?>
-<div class="kb-chat<?= $conversation !== null ? ' has-conversation' : '' ?>">
+<div class="kb-chat<?= $conversation !== null ? ' has-conversation' : '' ?>" data-chat data-since="<?= (int) $since ?>"
+     data-poll-active="<?= (int) $poll['active_ms'] ?>" data-poll-idle="<?= (int) $poll['idle_ms'] ?>" data-poll-background="<?= (int) $poll['background_ms'] ?>">
     <section class="kb-chat-sidebar" aria-label="Conversations">
         <?= $this->partial('chat/_list', ['conversations' => $conversations, 'conversation' => $conversation]) ?>
     </section>
@@ -25,8 +26,7 @@ $me = (int) $currentUser['id'];
         $addable = array_values(array_filter($people, static fn ($p) => !in_array((int) $p['id'], $memberIds, true)));
     ?>
         <section class="kb-chat-conversation" aria-labelledby="chat-title"
-                 data-chat-conversation="<?= $cid ?>" data-last-event="<?= (int) $lastEventId ?>"
-                 data-poll-active="<?= (int) $poll['active_ms'] ?>" data-poll-idle="<?= (int) $poll['idle_ms'] ?>" data-poll-background="<?= (int) $poll['background_ms'] ?>">
+                 data-chat-conversation="<?= $cid ?>" data-me="<?= $me ?>" data-group="<?= $isGroup ? '1' : '0' ?>" data-has-more="<?= count($events) >= 50 ? '1' : '0' ?>" data-last-event="<?= (int) $lastEventId ?>">
             <header class="kb-chat-head">
                 <a class="btn btn-light kb-chat-back" href="<?= e(url('/chat')) ?>" aria-label="Retour aux conversations"><i data-lucide="arrow-left" aria-hidden="true"></i></a>
                 <?php if ($isGroup): ?>

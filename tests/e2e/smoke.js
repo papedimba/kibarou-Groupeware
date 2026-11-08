@@ -170,6 +170,38 @@ async function minBorderContrast(p, selector) {
   }
   assert.ok(shown, 'alerte affichée par le service worker');
 
+  // Lot 4a : message reçu sans rechargement, brouillon conservé.
+  if (process.env.KB_DEMO_EMAIL && process.env.KB_DEMO_PASSWORD) {
+    const other = await browser.newContext({ viewport: { width: 1366, height: 820 } });
+    const pageB = await other.newPage();
+    pageB.on('pageerror', e => problems.push('B: ' + e.message));
+    await pageB.goto(base + '/login');
+    await pageB.fill('#email', process.env.KB_DEMO_EMAIL);
+    await pageB.fill('#password', process.env.KB_DEMO_PASSWORD);
+    await pageB.click('button[type=submit]');
+    await pageB.waitForURL(base + '/');
+    // A ouvre la conversation privée avec B.
+    const bUserId = execFileSync('php', ['-r', `require 'vendor/autoload.php'; $a = App\\Core\\App::boot(getcwd());
+      echo (int) $a->db()->value('SELECT id FROM users WHERE email = ?', [getenv('KB_DEMO_EMAIL')]);`]).toString().trim();
+    await page.goto(base + '/chat/with/' + bUserId);
+    const conversationUrl = page.url();
+    await pageB.goto(conversationUrl);
+    const text = 'Smoke ' + Date.now();
+    await pageB.fill('#chat-body', text);
+    await pageB.keyboard.press('Enter');
+    await pageB.locator('.kb-msg.is-mine:not(.is-pending)', { hasText: text }).waitFor({ timeout: 5000 });
+    await page.locator('.kb-msg:not(.is-mine)', { hasText: text }).waitFor({ timeout: 5000 });
+    assert.strictEqual(await pageB.inputValue('#chat-body'), '', 'zone de saisie vidée après envoi');
+    await page.fill('#chat-body', 'Brouillon ' + text);
+    await page.reload();
+    assert.strictEqual(await page.inputValue('#chat-body'), 'Brouillon ' + text, 'brouillon retrouvé après rechargement');
+    await page.fill('#chat-body', '');
+    await page.locator('#chat-body').dispatchEvent('input');
+    await other.close();
+  } else {
+    console.log('Messagerie à deux comptes ignorée : KB_DEMO_EMAIL / KB_DEMO_PASSWORD absents.');
+  }
+
   assert.deepStrictEqual(problems, [], 'aucune erreur console (CSP incluse)');
   await browser.close();
   console.log('Smoke UI OK');

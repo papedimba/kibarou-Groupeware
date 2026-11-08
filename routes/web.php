@@ -70,6 +70,10 @@ return static function (Router $r): void {
             $r->post('/chat/{id}/members', [ChatController::class, 'addMembers']);
             $r->post('/chat/{id}/rename', [ChatController::class, 'rename']);
             $r->post('/chat/{id}/leave', [ChatController::class, 'leave']);
+            $r->get('/api/chat/updates', [ChatController::class, 'updates']);
+            $r->get('/api/chat/conversations/{id}/history', [ChatController::class, 'history']);
+            $r->post('/api/chat/conversations/{id}/messages', [ChatController::class, 'apiSend']);
+            $r->post('/api/chat/conversations/{id}/read', [ChatController::class, 'read']);
         });
 
         $r->group(['perm:admin.access'], static function (Router $r) {

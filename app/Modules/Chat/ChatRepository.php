@@ -93,6 +93,13 @@ final class ChatRepository
         }, $rows);
     }
 
+    /** @return array<int,int> non-lus par conversation active */
+    public function unreadByConversation(int $userId): array
+    {
+        $rows = $this->db->fetchAll('SELECT cm.conversation_id, ' . self::UNREAD . ' AS unread FROM conversation_members cm WHERE cm.user_id = ? AND cm.left_at IS NULL', [$userId]);
+        return array_combine(array_map('intval', array_column($rows, 'conversation_id')), array_map('intval', array_column($rows, 'unread'))) ?: [];
+    }
+
     public function unreadTotal(int $userId): int
     {
         return (int) $this->db->value('SELECT COALESCE(SUM(' . self::UNREAD . '), 0) FROM conversation_members cm WHERE cm.user_id = ? AND cm.left_at IS NULL', [$userId]);
