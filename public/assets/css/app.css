@@ -605,3 +605,4 @@ button.kb-msg-seen { min-height: 44px; margin: -.6rem 0; padding: 0 .25rem; text
 .kb-cal-daycol .kb-ev-lane-1-4 { left: calc(1 * 100% / 4 + 2px); right: calc(2 * 100% / 4 + 2px); }
 .kb-cal-daycol .kb-ev-lane-2-4 { left: calc(2 * 100% / 4 + 2px); right: calc(1 * 100% / 4 + 2px); }
 .kb-cal-daycol .kb-ev-lane-3-4 { left: calc(3 * 100% / 4 + 2px); right: calc(0 * 100% / 4 + 2px); }
+.kb-cal-weekdays { display: flex; flex-wrap: wrap; gap: .25rem .75rem; }

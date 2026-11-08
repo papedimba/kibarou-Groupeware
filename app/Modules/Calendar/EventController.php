@@ -51,6 +51,7 @@ final class EventController extends Controller
             'end' => (int) $event['all_day'] === 1 ? $event['end_date'] . 'T10:00' : $svc->toLocal((string) $event['end_at'])->format('Y-m-d\TH:i'),
             'reminder' => (string) ($event['reminder_minutes'] ?? ''),
             'participants' => array_column($this->app->db()->fetchAll('SELECT user_id FROM event_participants WHERE event_id = ?', [$event['id']]), 'user_id'),
+            'until' => $event['series_id'] !== null ? (string) $this->app->db()->value('SELECT until_date FROM calendar_series WHERE id = ?', [$event['series_id']]) : '',
         ];
         return $this->form($event, $values);
     }

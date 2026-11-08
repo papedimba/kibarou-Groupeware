@@ -14,9 +14,14 @@ $cancelled = $event['status'] === 'cancelled';
     <?php if ($mine && !$cancelled): ?>
         <div class="d-flex flex-wrap gap-2">
             <a class="btn btn-outline-primary" href="<?= e(url("/calendar/events/$id/edit")) ?>">Modifier</a>
-            <form method="post" action="<?= e(url("/calendar/events/$id/cancel")) ?>" data-confirm="Annuler « <?= e($event['title']) ?> » ? Les participants seront prévenus." data-confirm-action="Annuler l'évènement" data-confirm-danger>
-                <?= csrf_field() ?><button class="btn btn-outline-danger" type="submit">Annuler l'évènement</button>
+            <form method="post" action="<?= e(url("/calendar/events/$id/cancel")) ?>" data-confirm="Annuler « <?= e($event['title']) ?> »<?= $event['series_id'] ? ' (cette fois seulement)' : '' ?> ? Les participants seront prévenus." data-confirm-action="Annuler" data-confirm-danger>
+                <?= csrf_field() ?><button class="btn btn-outline-danger" type="submit"><?= $event['series_id'] ? 'Annuler cette fois' : 'Annuler l\'évènement' ?></button>
             </form>
+            <?php if ($event['series_id']): ?>
+                <form method="post" action="<?= e(url("/calendar/events/$id/cancel")) ?>" data-confirm="Annuler cette occurrence et toutes les suivantes de la série ? Les participants seront prévenus." data-confirm-action="Annuler la suite" data-confirm-danger>
+                    <?= csrf_field() ?><input type="hidden" name="scope" value="following"><button class="btn btn-outline-danger" type="submit">Annuler celle-ci et les suivantes</button>
+                </form>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 </div>
@@ -29,14 +34,20 @@ $cancelled = $event['status'] === 'cancelled';
         <?php if (!$mine && !$cancelled): ?>
             <section class="card mb-4" aria-labelledby="respond-title">
                 <h2 class="card-header h6 m-0" id="respond-title">Votre réponse</h2>
-                <div class="card-body d-flex flex-wrap gap-2">
-                    <?php foreach (['yes', 'maybe', 'no'] as $r): ?>
-                        <form method="post" action="<?= e(url("/calendar/events/$id/respond")) ?>">
-                            <?= csrf_field() ?><input type="hidden" name="response" value="<?= $r ?>">
-                            <button class="btn <?= $event['response'] === $r ? 'btn-primary' : 'btn-outline-secondary' ?>" type="submit" aria-pressed="<?= $event['response'] === $r ? 'true' : 'false' ?>"><?= e($labels[$r]) ?></button>
-                        </form>
-                    <?php endforeach; ?>
-                </div>
+                <form class="card-body" method="post" action="<?= e(url("/calendar/events/$id/respond")) ?>">
+                    <?= csrf_field() ?>
+                    <fieldset class="kb-status-choices mb-2">
+                        <legend class="visually-hidden">Votre réponse</legend>
+                        <?php foreach (['yes', 'maybe', 'no'] as $r): ?>
+                            <input class="btn-check" type="radio" name="response" value="<?= $r ?>" id="resp-<?= $r ?>"<?= $event['response'] === $r ? ' checked' : '' ?> required>
+                            <label class="btn btn-outline-secondary" for="resp-<?= $r ?>"><?= e($labels[$r]) ?></label>
+                        <?php endforeach; ?>
+                    </fieldset>
+                    <?php if ($event['series_id']): ?>
+                        <label class="kb-check-row" for="resp-one"><input class="form-check-input" type="checkbox" name="scope" value="one" id="resp-one"> <span>Pour cette date seulement <span class="text-secondary">(sinon : cette date et les suivantes de la série)</span></span></label>
+                    <?php endif; ?>
+                    <button class="btn btn-primary mt-2" type="submit">Répondre</button>
+                </form>
             </section>
         <?php endif; ?>
         <section class="card" aria-labelledby="reminder-title">

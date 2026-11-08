@@ -38,46 +38,78 @@ final class EventService
         $data = $this->validate($input);
         $me = (int) $actor['id'];
         $invited = $this->invitees($input, $me);
-        $id = $this->db->transaction(function () use ($data, $me, $invited) {
-            $id = $this->db->insert('events', $data + ['organizer_id' => $me, 'created_at' => now_utc(), 'updated_at' => now_utc()]);
-            $this->addParticipant($id, $me, 'yes', $data['reminder_minutes']);
-            foreach ($invited as $uid) {
-                $this->addParticipant($id, $uid, 'pending', $data['reminder_minutes']);
+        $rows = $this->expand($data, $input);
+        $id = $this->db->transaction(function () use ($rows, $input, $me, $invited) {
+            $seriesId = count($rows) > 1 || in_array($input['repeat'] ?? '', ['weekdays', 'weekly', 'monthly'], true) ? $this->db->insert('calendar_series', [
+                'organizer_id' => $me, 'kind' => $input['repeat'], 'weekdays' => implode(',', array_map('intval', (array) ($input['weekdays'] ?? []))) ?: null,
+                'until_date' => substr((string) $input['until'], 0, 10), 'created_at' => now_utc(),
+            ]) : null;
+            $first = null;
+            foreach ($rows as $row) {
+                $id = $this->db->insert('events', $row + ['series_id' => $seriesId, 'organizer_id' => $me, 'created_at' => now_utc(), 'updated_at' => now_utc()]);
+                $first ??= $id;
+                $this->addParticipant($id, $me, 'yes', $row['reminder_minutes']);
+                foreach ($invited as $uid) {
+                    $this->addParticipant($id, $uid, 'pending', $row['reminder_minutes']);
+                }
             }
-            return $id;
+            return $first;
         });
+        // Une seule invitation par personne, même pour une série.
         $this->notifyInvited($actor, $id, $invited);
         return $id;
     }
 
-    /** @param array<string,mixed> $actor @param array<string,mixed> $input */
+    /**
+     * $scope : « one » (cette fois seulement ; une occurrence de série devient détachée) ou « following »
+     * (cette occurrence et les suivantes non détachées ; les précédentes ne bougent pas).
+     * @param array<string,mixed> $actor @param array<string,mixed> $input
+     */
     public function update(array $actor, int $eventId, array $input, string $scope = 'one'): void
     {
         $event = $this->requireOrganizer($actor, $eventId);
         $data = $this->validate($input);
         $me = (int) $actor['id'];
         $wanted = $this->invitees($input, $me);
-        $current = array_map('intval', array_column($this->db->fetchAll('SELECT user_id FROM event_participants WHERE event_id = ? AND user_id <> ?', [$eventId, $me]), 'user_id'));
-        $timeChanged = $this->timeKey($event) !== $this->timeKey($data);
-        $visibleChange = $timeChanged || $event['title'] !== $data['title'] || (string) $event['location'] !== (string) $data['location'];
-        $added = array_values(array_diff($wanted, $current));
-        $this->db->transaction(function () use ($eventId, $data, $event, $me, $wanted, $current, $added, $timeChanged) {
-            $this->db->update('events', $data + ['updated_at' => now_utc()], ['id' => $eventId]);
-            foreach (array_diff($current, $wanted) as $uid) {
-                $this->db->run('DELETE FROM event_participants WHERE event_id = ? AND user_id = ?', [$eventId, $uid]);
-            }
-            foreach ($added as $uid) {
-                $this->addParticipant($eventId, $uid, 'pending', $data['reminder_minutes']);
-            }
-            if ($timeChanged) {
-                // Nouvel horaire : les réponses ne valent plus, et le rappel repart.
-                $this->db->run("UPDATE event_participants SET response = 'pending', responded_at = NULL WHERE event_id = ? AND user_id <> ?", [$eventId, $me]);
-                $this->db->run('UPDATE event_participants SET reminded_at = NULL WHERE event_id = ?', [$eventId]);
-            }
-            if ($data['reminder_minutes'] !== ($event['reminder_minutes'] !== null ? (int) $event['reminder_minutes'] : null)) {
-                $this->db->run('UPDATE event_participants SET reminder_minutes = ?, reminded_at = NULL WHERE event_id = ? AND reminder_custom = 0', [$data['reminder_minutes'], $eventId]);
+        $targets = [$eventId => $data];
+        if ($scope === 'following' && $event['series_id'] !== null) {
+            $targets = $this->shiftFollowing($event, $data);
+        }
+        $timeChanged = false;
+        $added = [];
+        $before = [];
+        $this->db->transaction(function () use ($targets, $wanted, $me, $event, $scope, &$timeChanged, &$added, &$before) {
+            foreach ($targets as $id => $row) {
+                $old = $this->db->fetch('SELECT * FROM events WHERE id = ?', [$id]);
+                $current = array_map('intval', array_column($this->db->fetchAll('SELECT user_id FROM event_participants WHERE event_id = ? AND user_id <> ?', [$id, $me]), 'user_id'));
+                $before = array_values(array_unique([...$before, ...$current]));
+                $changed = $this->timeKey($old) !== $this->timeKey($row);
+                $timeChanged = $timeChanged || $changed;
+                $detached = $scope === 'one' && $event['series_id'] !== null ? ['detached' => 1] : [];
+                $this->db->update('events', $row + $detached + ['updated_at' => now_utc()], ['id' => $id]);
+                foreach (array_diff($current, $wanted) as $uid) {
+                    $this->db->run('DELETE FROM event_participants WHERE event_id = ? AND user_id = ?', [$id, $uid]);
+                }
+                foreach (array_diff($wanted, $current) as $uid) {
+                    $this->addParticipant($id, $uid, 'pending', $row['reminder_minutes']);
+                    $added[] = $uid;
+                }
+                if ($changed) {
+                    // Nouvel horaire : les réponses ne valent plus, et le rappel repart.
+                    $this->db->run("UPDATE event_participants SET response = 'pending', responded_at = NULL WHERE event_id = ? AND user_id <> ?", [$id, $me]);
+                    $this->db->run('UPDATE event_participants SET reminded_at = NULL WHERE event_id = ?', [$id]);
+                }
+                if ($row['reminder_minutes'] !== ($old['reminder_minutes'] !== null ? (int) $old['reminder_minutes'] : null)) {
+                    $this->db->run('UPDATE event_participants SET reminder_minutes = ?, reminded_at = NULL WHERE event_id = ? AND reminder_custom = 0', [$row['reminder_minutes'], $id]);
+                }
             }
         });
+        if ($scope === 'following' && $event['series_id'] !== null && !empty($input['until'])) {
+            $this->resizeSeries($event, $data, (string) $input['until']);
+        }
+        $added = array_values(array_unique(array_diff($added, $before)));
+        $visibleChange = $timeChanged || $event['title'] !== $data['title'] || (string) $event['location'] !== (string) $data['location'];
+        // Une seule notification par personne, même quand toute une série change.
         if ($visibleChange) {
             $this->notifyParticipants($actor, $eventId, 'calendar.updated', 'Modifié : ' . $data['title'] . ' — ' . $this->when($data), array_diff($wanted, $added));
         }
@@ -91,7 +123,9 @@ final class EventService
         if ($event['status'] === 'cancelled') {
             return;
         }
-        $this->db->update('events', ['status' => 'cancelled', 'updated_at' => now_utc()], ['id' => $eventId]);
+        // « Toute la série à venir » : occurrences détachées comprises.
+        $ids = $scope === 'following' && $event['series_id'] !== null ? $this->followingIds($event, true) : [$eventId];
+        $this->db->run("UPDATE events SET status = 'cancelled', updated_at = UTC_TIMESTAMP() WHERE id IN (" . implode(',', array_fill(0, count($ids), '?')) . ')', $ids);
         $others = array_map('intval', array_column($this->db->fetchAll('SELECT user_id FROM event_participants WHERE event_id = ? AND user_id <> ?', [$eventId, (int) $actor['id']]), 'user_id'));
         $this->notifyParticipants($actor, $eventId, 'calendar.cancelled', 'Annulé : ' . $event['title'] . ' — ' . $this->when($event), $others);
         $this->audit->log((int) $actor['id'], 'calendar.event_cancelled', 'event', $eventId);
@@ -105,7 +139,9 @@ final class EventService
         if (!isset(self::RESPONSES[$response])) {
             throw new ValidationException(['response' => 'Réponse inconnue.']);
         }
-        $this->db->run('UPDATE event_participants SET response = ?, responded_at = UTC_TIMESTAMP() WHERE event_id = ? AND user_id = ?', [$response, $eventId, $me]);
+        $ids = $scope === 'series' && $event['series_id'] !== null ? $this->followingIds($event, true) : [$eventId];
+        $this->db->run('UPDATE event_participants SET response = ?, responded_at = UTC_TIMESTAMP() WHERE user_id = ? AND event_id IN ('
+            . implode(',', array_fill(0, count($ids), '?')) . ')', [$response, $me, ...$ids]);
         if ((int) $event['organizer_id'] !== $me && $event['organizer_id'] !== null) {
             $this->notifier->notify((int) $event['organizer_id'], 'calendar.response',
                 $actor['first_name'] . ' ' . $actor['last_name'] . ' : ' . self::RESPONSES[$response] . ' — ' . $event['title'], '/calendar/events/' . $eventId, null, $me);
@@ -260,6 +296,117 @@ final class EventService
                 $this->notifier->notify((int) $uid, $type, $title, '/calendar/events/' . $eventId, null, (int) $actor['id']);
             }
         }
+    }
+
+    /**
+     * Lignes `events` à créer : une seule, ou une par occurrence quand `repeat` est demandé.
+     * @param array<string,mixed> $data @param array<string,mixed> $input @return list<array<string,mixed>>
+     */
+    private function expand(array $data, array $input): array
+    {
+        $kind = (string) ($input['repeat'] ?? '');
+        if (!in_array($kind, ['weekdays', 'weekly', 'monthly'], true)) {
+            return [$data];
+        }
+        $until = \DateTimeImmutable::createFromFormat('!Y-m-d', substr((string) ($input['until'] ?? ''), 0, 10), $this->timezone());
+        if ($until === false) {
+            throw new ValidationException(['until' => 'Indiquez la date de fin de la série.']);
+        }
+        [$start, $minutes, $days] = $this->shape($data);
+        return array_map(fn (DateTimeImmutable $d) => $this->at($data, $d, $minutes, $days),
+            (new SeriesService())->occurrences($kind, array_map('intval', (array) ($input['weekdays'] ?? [])), $start, $until));
+    }
+
+    /**
+     * Nouvelle date de fin (une série se prolonge ou se raccourcit) : occurrences ajoutées avec les participants et
+     * réponses de l'occurrence modifiée, ou annulées au-delà de la nouvelle fin. 1 an et 260 occurrences au plus.
+     * @param array<string,mixed> $event @param array<string,mixed> $data
+     */
+    private function resizeSeries(array $event, array $data, string $until): void
+    {
+        $series = $this->db->fetch('SELECT * FROM calendar_series WHERE id = ?', [$event['series_id']]);
+        $newUntil = \DateTimeImmutable::createFromFormat('!Y-m-d', substr($until, 0, 10), $this->timezone());
+        if ($series === null || $newUntil === false || $newUntil->format('Y-m-d') === $series['until_date']) {
+            return;
+        }
+        $rows = $this->db->fetchAll("SELECT * FROM events WHERE series_id = ? ORDER BY COALESCE(start_at, start_date)", [$series['id']]);
+        [$first] = $this->shape($rows[0]);
+        $current = $this->db->fetch('SELECT * FROM events WHERE id = ?', [$event['id']]);
+        [$start, $minutes, $days] = $this->shape($current);
+        $dates = (new SeriesService())->occurrences((string) $series['kind'], array_filter(array_map('intval', explode(',', (string) $series['weekdays']))),
+            $first->setTime((int) $start->format('H'), (int) $start->format('i')), $newUntil);
+        $existing = array_map(fn ($r) => $this->shape($r)[0]->format('Y-m-d'), $rows);
+        $people = $this->db->fetchAll('SELECT * FROM event_participants WHERE event_id = ?', [$event['id']]);
+        $this->db->transaction(function () use ($dates, $existing, $series, $current, $minutes, $days, $people, $newUntil) {
+            foreach ($dates as $d) {
+                if (in_array($d->format('Y-m-d'), $existing, true) || $d->format('Y-m-d') <= max($existing)) {
+                    continue;
+                }
+                $row = array_intersect_key($current, array_flip(['title', 'location', 'description', 'all_day', 'is_private', 'reminder_minutes', 'organizer_id']));
+                $id = $this->db->insert('events', $this->at($row + ['start_at' => null, 'end_at' => null, 'start_date' => null, 'end_date' => null], $d, $minutes, $days)
+                    + ['series_id' => $series['id'], 'created_at' => now_utc(), 'updated_at' => now_utc()]);
+                foreach ($people as $p) {
+                    $this->db->insert('event_participants', ['event_id' => $id, 'user_id' => $p['user_id'], 'response' => $p['response'],
+                        'reminder_minutes' => $p['reminder_minutes'], 'reminder_custom' => $p['reminder_custom'], 'responded_at' => $p['responded_at']]);
+                }
+            }
+            $this->db->run("UPDATE events SET status = 'cancelled', updated_at = UTC_TIMESTAMP() WHERE series_id = ? AND status = 'confirmed'
+                AND COALESCE(start_date, DATE(start_at)) > ?", [$series['id'], $newUntil->format('Y-m-d')]);
+            $this->db->update('calendar_series', ['until_date' => $newUntil->format('Y-m-d')], ['id' => $series['id']]);
+        });
+    }
+
+    /**
+     * « Cette occurrence et les suivantes » : même décalage de jours, nouvelle heure et nouvelle durée pour chacune.
+     * @param array<string,mixed> $event @param array<string,mixed> $data @return array<int,array<string,mixed>>
+     */
+    private function shiftFollowing(array $event, array $data): array
+    {
+        [$oldStart] = $this->shape($event);
+        [$newStart, $minutes, $days] = $this->shape($data);
+        $shift = (int) $oldStart->setTime(0, 0)->diff($newStart->setTime(0, 0))->format('%r%a');
+        $out = [];
+        foreach ($this->followingIds($event, false) as $id) {
+            [$occ] = $this->shape($this->db->fetch('SELECT * FROM events WHERE id = ?', [$id]));
+            $day = $occ->modify(($shift >= 0 ? '+' : '') . $shift . ' days');
+            $out[$id] = $this->at($data, $day->setTime((int) $newStart->format('H'), (int) $newStart->format('i')), $minutes, $days);
+        }
+        return $out;
+    }
+
+    /** Début local, durée en minutes (horaire) et en jours (journée entière). @param array<string,mixed> $e @return array{DateTimeImmutable,int,int} */
+    private function shape(array $e): array
+    {
+        if ((int) $e['all_day'] === 1) {
+            $s = new DateTimeImmutable((string) $e['start_date'], $this->timezone());
+            return [$s, 0, (int) $s->diff(new DateTimeImmutable((string) $e['end_date'], $this->timezone()))->format('%a')];
+        }
+        $s = $this->toLocal((string) $e['start_at']);
+        return [$s, (int) (($this->toLocal((string) $e['end_at'])->getTimestamp() - $s->getTimestamp()) / 60), 0];
+    }
+
+    /** @param array<string,mixed> $data @return array<string,mixed> */
+    private function at(array $data, DateTimeImmutable $startLocal, int $minutes, int $days): array
+    {
+        if ((int) $data['all_day'] === 1) {
+            return ['start_date' => $startLocal->format('Y-m-d'), 'end_date' => $startLocal->modify("+$days days")->format('Y-m-d')] + $data;
+        }
+        // Heure murale conservée : 8 h reste 8 h après un changement d'heure.
+        return ['start_at' => $this->toUtc($startLocal->format('Y-m-d H:i')), 'end_at' => $this->toUtc($startLocal->modify("+$minutes minutes")->format('Y-m-d H:i'))] + $data;
+    }
+
+    /**
+     * Cette occurrence et les suivantes de la série, non annulées ; occurrences détachées seulement si demandé (et toujours celle-ci).
+     * @param array<string,mixed> $event @return list<int>
+     */
+    private function followingIds(array $event, bool $withDetached): array
+    {
+        return array_map('intval', array_column($this->db->fetchAll(
+            "SELECT id FROM events WHERE series_id = ? AND status = 'confirmed'
+               AND COALESCE(start_at, CAST(start_date AS DATETIME)) >= COALESCE(?, CAST(? AS DATETIME))
+               AND (detached = 0 OR id = ? OR ? = 1) ORDER BY COALESCE(start_at, start_date)",
+            [$event['series_id'], $event['start_at'], $event['start_date'], $event['id'], $withDetached ? 1 : 0],
+        ), 'id'));
     }
 
     /** @param array<string,mixed> $e */

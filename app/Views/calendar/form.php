@@ -28,6 +28,42 @@ $reminders = ['' => 'Aucun rappel', '15' => '15 minutes avant', '60' => '1 heure
                 <?= field_error($errors, 'end') ?>
             </div>
         </div>
+        <?php if (!$editing): ?>
+            <fieldset class="mb-3">
+                <legend class="form-label fs-6 fw-semibold">Répétition</legend>
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="visually-hidden" for="repeat">Répétition</label>
+                        <select class="form-select" id="repeat" name="repeat">
+                            <?php foreach (['' => 'Ne se répète pas', 'weekdays' => 'Chaque jour ouvré (lun.–ven.)', 'weekly' => 'Chaque semaine', 'monthly' => 'Chaque mois (même date)'] as $k => $label): ?>
+                                <option value="<?= e($k) ?>"<?= ($v['repeat'] ?? '') === $k ? ' selected' : '' ?>><?= e($label) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label visually-hidden" for="until">Jusqu'au</label>
+                        <input class="form-control<?= invalid($errors, 'until') ?>" type="date" id="until" name="until" value="<?= e($v['until'] ?? '') ?>" aria-describedby="until-help">
+                        <div class="form-text" id="until-help">Jusqu'au (un an au plus).</div>
+                        <?= field_error($errors, 'until') ?>
+                    </div>
+                </div>
+                <div class="kb-cal-weekdays mt-2" role="group" aria-label="Jours de la semaine (répétition chaque semaine)">
+                    <?php foreach ([1 => 'lun.', 2 => 'mar.', 3 => 'mer.', 4 => 'jeu.', 5 => 'ven.', 6 => 'sam.', 7 => 'dim.'] as $n => $label): ?>
+                        <label class="kb-check-row" for="wd<?= $n ?>"><input class="form-check-input" type="checkbox" name="weekdays[]" value="<?= $n ?>" id="wd<?= $n ?>"<?= in_array((string) $n, (array) ($v['weekdays'] ?? []), true) ? ' checked' : '' ?>> <span><?= e($label) ?></span></label>
+                    <?php endforeach; ?>
+                </div>
+                <?= field_error($errors, 'weekdays') ?>
+            </fieldset>
+        <?php elseif (!empty($event['series_id'])): ?>
+            <fieldset class="mb-3">
+                <legend class="form-label fs-6 fw-semibold">Cet évènement fait partie d'une série</legend>
+                <label class="kb-check-row" for="scope-one"><input class="form-check-input" type="radio" name="scope" value="one" id="scope-one" checked> <span>Modifier cette fois seulement</span></label>
+                <label class="kb-check-row" for="scope-following"><input class="form-check-input" type="radio" name="scope" value="following" id="scope-following"> <span>Modifier cette occurrence et les suivantes</span></label>
+                <label class="form-label mt-2" for="until">Fin de la série <span class="text-secondary">(prise en compte pour « et les suivantes »)</span></label>
+                <input class="form-control<?= invalid($errors, 'until') ?>" type="date" id="until" name="until" value="<?= e($v['until'] ?? '') ?>">
+                <?= field_error($errors, 'until') ?>
+            </fieldset>
+        <?php endif; ?>
         <label class="kb-check-row mb-3" for="all_day">
             <input class="form-check-input" type="checkbox" id="all_day" name="all_day" value="1"<?= (string) ($v['all_day'] ?? '0') === '1' ? ' checked' : '' ?>>
             <span>Journée entière <span class="text-secondary">(les heures sont ignorées)</span></span>
