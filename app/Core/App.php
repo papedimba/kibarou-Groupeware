@@ -6,6 +6,8 @@ namespace App\Core;
 
 use App\Modules\Auth\AuthService;
 use App\Modules\Auth\PasswordResetService;
+use App\Modules\Chat\ChatRepository;
+use App\Modules\Chat\ChatService;
 use App\Modules\Directory\AvatarService;
 use App\Modules\Directory\DirectoryRepository;
 use App\Modules\Directory\PresenceService;
@@ -128,6 +130,11 @@ final class App
             (int) $this->config['auth']['password_min_length'],
             $this->notifier(),
         ));
+    }
+
+    public function chat(): ChatService
+    {
+        return $this->service(ChatService::class, fn () => new ChatService($this->db(), new ChatRepository($this->db()), $this->rbac(), $this->audit()));
     }
 
     public function avatars(): AvatarService

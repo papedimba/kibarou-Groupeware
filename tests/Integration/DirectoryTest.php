@@ -121,6 +121,7 @@ final class DirectoryTest extends IntegrationTestCase
 
     public function testWriteButtonHiddenWhileChatDisabled(): void
     {
+        $this->app->db()->run("UPDATE modules SET is_enabled = 0 WHERE slug = 'chat'");
         $t = $this->team();
         $this->login('collegue@kibarou.test', 'Motdepasse123');
         $r = $this->get("/directory/{$t['target']}");

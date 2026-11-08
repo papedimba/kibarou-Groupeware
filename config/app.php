@@ -46,6 +46,14 @@ return [
         'batch_size' => 20,
         'max_attempts' => 5,
     ],
+    // Messagerie : rythme d'interrogation (ms), réglable selon les limites de l'hébergement.
+    'chat' => [
+        'poll' => [
+            'active_ms' => (int) Env::get('CHAT_POLL_ACTIVE_MS', 3000),
+            'idle_ms' => (int) Env::get('CHAT_POLL_IDLE_MS', 10000),
+            'background_ms' => (int) Env::get('CHAT_POLL_BACKGROUND_MS', 30000),
+        ],
+    ],
     'retention' => [
         'login_attempts_days' => 90,
         'audit_logs_days' => (int) Env::get('AUDIT_RETENTION_DAYS', 730),
