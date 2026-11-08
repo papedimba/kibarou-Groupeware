@@ -44,7 +44,7 @@ Légende : ✅ terminé et testé · 🔜 prochain · ⏳ planifié
 | 3. Notifications | Centrale, cloche, préférences, alertes navigateur PC/Android, emails immédiats et récapitulatif à 7 h | ✅ |
 | 4a. Messagerie : privé et groupes | Conversations privées, groupes, non-lus, interrogation adaptative, brouillons, envoi sans JavaScript | ✅ |
 | 4b. Messagerie : le confort | Pièces jointes (photos réduites, .docx, .xlsx, PDF), réponses citées, réactions, modification et suppression sous 15 minutes, envoi sans doublon | ✅ |
-| 4c. Messagerie : l'organisation | Salons, salons de service, accusés de lecture, indicateur de saisie, recherche | 🔜 |
+| 4c. Messagerie : l'organisation | Salons, salons de service, alertes par conversation, accusés de lecture, recherche (indicateur de saisie reporté au lot 10) | ✅ |
 | 5. Calendrier + réunions | Événements, participants, invitations, rappels CRON, récurrence (RRULE simplifiée), export ICS ; convocations, ordre du jour, comptes rendus, décisions, actions | ⏳ |
 | 6. Tâches + projets | Tâches, Kanban, commentaires, pièces jointes, historique ; projets, membres, jalons, progression | ⏳ |
 | 7. Documents | Dossiers, versions, permissions, corbeille, téléchargement sécurisé, recherche | ⏳ |
@@ -104,3 +104,10 @@ Ordre justifié : l'annuaire et les notifications sont des dépendances de la me
 - Livré : photos (réduites dans le navigateur puis réencodées, seule la version réduite est gardée), fichiers .docx/.xlsx contrôlés sans macros, PDF, anciens .doc/.xls refusés ; envoi fichier par fichier avec progression et reprise ; aperçu avant envoi ; visionneuse ; réponses citées ; six réactions ; modification et suppression de ses messages sous 15 minutes ; envoi sans doublon (identifiant créé par le navigateur) ; espace disque des pièces jointes dans l'administration ; nettoyage des fichiers abandonnés.
 - Tests : 206 PHPUnit ; test de fumée Playwright à deux comptes (photo réduite avant envoi, réponse, réaction, modification, suppression, pas de doublon).
 - À vérifier chez Likuid : extensions `zip`, `fileinfo`, `exif` ; quota disque (checklist de mise en production).
+
+### Lot 4c — Messagerie : l'organisation — 08/11/2026
+- Conception : `docs/superpowers/specs/2026-11-08-messagerie-4c-design.md` ; plan : `docs/superpowers/plans/2026-11-08-lot4c-messagerie.md`.
+- Livré : salons ouverts (rejoindre, quitter, historique complet sans avalanche de non-lus, archivage en lecture seule, droits de gestion par créateur et par la direction) ; salons de service tenus à jour d'après l'annuaire ; alertes réglables par conversation ; accusés de lecture « Vu » / « Vu par N » ; recherche dans le texte et les noms de fichiers avec ouverture sur le message.
+- Tests : 226 PHPUnit ; test de fumée Playwright à deux comptes (rejoindre un salon et lire l’historique, recherche, « Vu ») ; régressions de la messagerie.
+- Décision : pas d'indicateur « en train d'écrire » (reporté au lot 10, avec un éventuel service temps réel).
+- Après mise en production : lancer `php bin/console cron:run` une fois pour créer les salons de service.

@@ -69,6 +69,13 @@ d'un utilisateur ferme ses sessions, pour que ses nouveaux droits s'appliquent t
 - Les conversations sont privées : un administrateur ne peut pas les lire. Le journal d'audit enregistre la création des groupes, les ajouts et les départs, jamais le contenu.
 - Un compte désactivé ne peut plus recevoir de messages ; ses messages passés restent visibles des autres membres.
 
+### Salons et salons de service (lot 4c)
+- **Salons** (*Messagerie › Salons*) : ouverts à toute l'entreprise, typiquement un par chantier ou par thème. Chacun les rejoint ou les quitte librement et lit tout l'historique en arrivant. Les alertes y sont coupées par défaut ; chacun peut les activer par l'interrupteur « Alertes » d'une conversation.
+- **Créer un salon** : administrateurs, directeurs et chefs de service (permission « Gérer les salons »). **Modifier, archiver, rouvrir** : administrateurs et directeurs sur tous les salons ; un chef de service sur ceux qu'il a créés. Un salon archivé reste lisible (et peut être rejoint) mais n'accepte plus de messages ; il n'est jamais supprimé.
+- **Salons de service** : un par service actif, automatique. Les membres suivent l'annuaire (changer le service d'une personne la fait changer de salon, désactiver un compte l'en retire) ; le salon prend le nom du service et est archivé si le service est désactivé. La tâche planifiée rattrape toute différence toutes les 5 minutes.
+- **Accusés de lecture** : « Vu » en conversation privée, « Vu par N » (avec les noms) en groupe et en salon.
+- **Recherche** : champ « Rechercher dans mes messages » en haut de la liste ; texte et noms de fichiers, dans ce que chacun a le droit de lire.
+
 ### Pièces jointes, réponses, réactions (lot 4b)
 - Chacun peut joindre des photos, des fichiers Word (.docx), Excel (.xlsx) ou PDF, jusqu'à 10 par message et 6 Mo par fichier. Les photos sont réduites automatiquement. Les anciens formats .doc et .xls sont refusés : il faut enregistrer le fichier en .docx ou .xlsx.
 - Répondre, réagir, modifier ou supprimer : bouton « … » au survol sur PC, appui long sur téléphone. Modifier et supprimer ne sont possibles que sur ses propres messages, pendant 15 minutes.

@@ -378,7 +378,7 @@ a.kb-chat-sub { color: var(--kb-blue); padding: .2rem 0; }
 .kb-tray-retry { min-height: 44px; padding: 0 .25rem; color: #b42318; }
 .kb-msg { position: relative; }
 .kb-msg-menu { position: absolute; z-index: 20; top: 100%; left: 0; min-width: 220px; margin-top: .25rem; padding: .35rem; background: #fff;
-    border: 1px solid var(--kb-gray-200); border-radius: 12px; box-shadow: 0 8px 24px rgba(15, 31, 61, .14); display: flex; flex-direction: column; }
+    border: 1px solid var(--kb-gray-200); border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, .12); display: flex; flex-direction: column; }
 .kb-msg.is-mine .kb-msg-menu { left: auto; right: 0; }
 .kb-msg-menu-reactions { display: flex; justify-content: space-between; padding-bottom: .25rem; margin-bottom: .25rem; border-bottom: 1px solid var(--kb-gray-200); }
 .kb-msg-menu-react { width: 44px; height: 44px; border: 0; background: none; border-radius: 8px; font-size: 1.2rem; }

@@ -115,7 +115,20 @@ Le mutualisé interdit les processus permanents : la messagerie utilise du **pol
   champs qu'un évènement `message`), livrés seulement si le message d'origine est visible du lecteur, sans effet sur
   l'ordre de la liste ni sur les non-lus. `ChatRepository::hydrate()` ajoute pièces jointes, réactions et extrait cité,
   pour la page comme pour l'API.
-- Reporté au lot 4c : salons et salons de service, accusés de lecture détaillés, indicateur de saisie, recherche.
+
+**Réalisé au lot 4c** (conception : `docs/superpowers/specs/2026-11-08-messagerie-4c-design.md`) :
+
+- Deux types de conversation de plus, `channel` (salon) et `department` (salon de service), sur le même modèle : journal,
+  interrogation, pièces jointes, réactions et confidentialité s'appliquent tels quels. `ChannelService` porte les règles
+  propres (rejoindre/quitter, historique complet avec `joined_event_id = 0`, archivage en lecture seule, droits de gestion).
+- Salons de service : `ChannelService::syncDepartments()` rapproche membres, nom et état de l'annuaire ; appelée après
+  chaque modification de compte ou de service (`UserService`, `OrganizationService`) et par `cron:run`.
+- Alertes par conversation (`conversation_members.notify`, coupées par défaut dans les salons).
+- Accusés de lecture sans évènement supplémentaire : `GET /api/chat/updates?…&open=<id>` renvoie les positions de lecture
+  des membres de la conversation ouverte ; `entered_event_id` exclut des lecteurs les personnes arrivées après le message.
+- Recherche `GET /chat/search?q=` : `LIKE` sur les conversations visibles (pas d'index plein texte, inutile à cette échelle) ;
+  `GET /chat/{id}?around=<message>` ouvre l'historique centré sur un message.
+- Reporté au lot 10 : indicateur « en train d'écrire » (sans connexion permanente, il arriverait en retard).
 
 **Charge estimée** (hypothèse : 50 utilisateurs dont 30 actifs simultanément, intervalle moyen de 8 s) :
 environ 4 requêtes HTTP/s et 4 requêtes SQL légères/s. À confronter aux limites chiffrées de Likuid ; les

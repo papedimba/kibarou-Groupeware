@@ -107,6 +107,16 @@ $db->transaction(function () use ($db, $hash, $now, $app) {
     $last = (int) $db->value('SELECT MAX(id) FROM messages');
     $chat->react($u('moussa.traore'), $last, '👍');
     $chat->react($u('fatou.kone'), $last, '✅');
+    // Salons : un chantier ouvert, un salon archivé ; salons de service d'après l'annuaire.
+    $salon = $app->channels()->create($u('moussa.traore'), 'Chantier Pont de Sotuba', 'Ouvrage d\'art, lot 3');
+    $app->channels()->join($u('seydou.coulibaly'), $salon);
+    $app->channels()->join($u('fatou.kone'), $salon);
+    $chat->send($u('moussa.traore'), $salon, 'Bienvenue dans le salon du chantier : toutes les décisions passent par ici.');
+    $chat->send($u('seydou.coulibaly'), $salon, 'Coffrage des piles P3 et P4 validé par le bureau de contrôle.');
+    $old = $app->channels()->create($u('moussa.traore'), 'Matériel et engins', 'Réservations de la grue (2025)');
+    $chat->send($u('moussa.traore'), $old, 'La grue est rendue au loueur, salon archivé.');
+    $app->channels()->archive($u('moussa.traore'), $old);
+    $app->channels()->syncDepartments();
     // Aucun email de démonstration : les notifications de messages sont considérées comme traitées.
     $db->run("UPDATE notifications SET email_status = 'digested' WHERE type = 'chat.message'");
 });

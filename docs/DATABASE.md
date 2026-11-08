@@ -79,6 +79,18 @@ Permissions livrées : `admin.access`, `users.view`, `users.manage`, `organizati
 
 Le contenu des messages n'est jamais copié dans les notifications, les emails ni le journal d'audit.
 
+## Lot 4c : salons (migration 0008)
+
+| Table / colonne | Rôle |
+|---|---|
+| `conversations.type` | + `channel` (salon), `department` (salon de service) |
+| `conversations.department_id` | Service du salon de service (unique) |
+| `conversations.description`, `archived_at` | Description d'un salon ; archivage (lecture seule) |
+| `conversation_members.notify` | Alertes de la conversation pour ce membre (1 en privé et en groupe, 0 dans les salons à l'arrivée) |
+| `conversation_members.entered_event_id` | Dernier évènement au moment de l'arrivée : un membre arrivé après un message n'en est pas compté lecteur |
+| `chat_events.type` | + `archived`, `unarchived` |
+| Permission `chat.channels.manage` | « Gérer les salons » : administrateurs, directeurs, chefs de service |
+
 ## Lot 4b : confort de la messagerie (migration 0007)
 
 | Table / colonne | Rôle |

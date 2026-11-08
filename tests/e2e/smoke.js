@@ -274,6 +274,22 @@ async function minBorderContrast(p, selector) {
     // Chez B, la bulle reste mais son texte est remplacé par « Message supprimé ».
     await pageB.locator('.kb-msg', { hasText: replyText }).waitFor({ state: 'detached', timeout: 8000 });
     assert.ok(await pageB.locator('.kb-msg[data-deleted="1"] .kb-msg-deleted').count() > 0, 'mention « Message supprimé » chez l\'autre');
+    // Lot 4c : B rejoint un salon et lit un message antérieur ; A retrouve un message par la recherche.
+    const salonText = 'Décision salon ' + Date.now();
+    const salonId = execFileSync('php', ['-r', `require 'vendor/autoload.php'; $a = App\\Core\\App::boot(getcwd());
+      $me = $a->db()->fetch('SELECT * FROM users WHERE email = ?', [getenv('KB_EMAIL')]);
+      $id = $a->channels()->create($me, 'Salon smoke ' . getenv('KB_STAMP'), '');
+      $a->chat()->send($me, $id, getenv('KB_SALON_TEXT'));
+      echo $id;`], { env: { ...process.env, KB_STAMP: String(Date.now()), KB_SALON_TEXT: salonText } }).toString().trim();
+    await pageB.goto(base + '/chat/channels');
+    await pageB.locator('.kb-channel', { hasText: 'Salon smoke' }).last().locator('button', { hasText: 'Rejoindre' }).click();
+    await pageB.waitForURL(base + '/chat/' + salonId);
+    await pageB.locator('.kb-msg', { hasText: salonText }).waitFor({ timeout: 8000 });
+    await page.goto(base + '/chat/search?q=' + encodeURIComponent(photoText));
+    await page.locator('.kb-search-result', { hasText: photoText }).first().click();
+    await page.locator('.kb-msg.is-target', { hasText: photoText }).waitFor({ timeout: 8000 });
+    await pageB.goto(conversationUrl);
+    await page.goto(conversationUrl);
     // Réponse perdue puis « Réessayer » : un seul message (même client_id).
     const once = 'Une fois ' + Date.now();
     // La 1re requête atteint le serveur mais sa réponse est perdue.

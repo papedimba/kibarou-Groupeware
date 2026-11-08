@@ -95,6 +95,7 @@ Elle envoie les emails en file et applique la politique de conservation. Si elle
 - [ ] Limites d'envoi : `upload_max_filesize` ≥ 6M et `post_max_size` ≥ 8M (fichier `public/.user.ini` fourni ; sinon à régler dans le panneau Likuid)
 - [ ] Extension GD avec prise en charge WebP active (photos de profil et de la messagerie) ; sans elle, l'envoi de photo est refusé avec un message clair
 - [ ] Extensions `fileinfo`, `exif` et `zip` actives (contrôle des pièces jointes ; sans `zip`, les .docx/.xlsx sont refusés)
+- [ ] `php bin/console cron:run` exécuté une fois après la migration 0008 : les salons de service sont créés
 - [ ] Quota disque de l'hébergement connu et seuil `CHAT_STORAGE_WARN_MB` réglé en conséquence ; `storage/private/chat` inclus dans la sauvegarde
 - [ ] Limites Likuid obtenues par écrit (CPU, processus, connexions SQL, requêtes/heure) et reportées dans PLAN.md
 - [ ] HTTPS actif, redirection HTTP → HTTPS effective, HSTS présent (indispensable aussi aux alertes du navigateur et au service worker `/sw.js`)

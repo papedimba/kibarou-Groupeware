@@ -54,6 +54,15 @@ l'autorisation à chaque téléchargement (`Content-Disposition: attachment`, `n
 - Limite de 30 messages par minute et par personne (429) ; messages refusés vers un compte désactivé.
 - Notifications et emails sans contenu de message ; audit des actions de groupe sans contenu.
 
+## Salons, accusés de lecture et recherche (lot 4c)
+- Un salon est ouvert à toute l'entreprise par nature (on le rejoint et on y lit tout l'historique) ; les conversations
+  privées et les groupes restent strictement privés.
+- Recherche limitée aux conversations dont on est membre actif, aux messages postérieurs à son arrivée (sauf salons, à
+  historique complet) et non supprimés ; caractères `%` et `_` cherchés littéralement ; extrait échappé avant surlignage.
+- Positions de lecture renvoyées seulement à un membre actif de la conversation demandée.
+- Gestion d'un salon : administrateurs et directeurs sur tous ; chef de service sur ceux qu'il a créés ; actions auditées
+  sans contenu. Un salon de service ne se gère pas à la main : il suit l'annuaire.
+
 ## Pièces jointes de la messagerie (lot 4b)
 - Liste blanche contrôlée sur le **contenu réel** (`finfo`) : photos JPEG/PNG/WebP, `.docx`, `.xlsx`, PDF. Les `.docx`/`.xlsx`
   sont ouverts (`ZipArchive`) : il faut un vrai document Word ou Excel, et tout fichier contenant des macros (`vbaProject.bin`)
