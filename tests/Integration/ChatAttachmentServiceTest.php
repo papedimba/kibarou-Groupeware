@@ -162,4 +162,12 @@ final class ChatAttachmentServiceTest extends IntegrationTestCase
         $this->assertNull($this->service->absolutePath('avatars/1-0123456789abcdef.webp'));
         $this->assertNull($this->service->absolutePath('chat/2026/11/' . str_repeat('a', 32) . '.php'));
     }
+
+    public function testContentTypesMarkerBeyond64KbIsNotRead(): void
+    {
+        // [Content_Types].xml énorme (bombe de décompression) : seul le début est lu, le fichier est refusé.
+        $padded = '<Types>' . str_repeat(' ', 300000) . '<Override ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>';
+        $bomb = $this->zip(['[Content_Types].xml' => $padded, 'word/document.xml' => '<w:document/>']);
+        $this->assertStringStartsWith('Ce type de fichier', $this->rejected($this->file('rapport.docx', $bomb)));
+    }
 }

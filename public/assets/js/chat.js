@@ -44,7 +44,6 @@
     }
     var EDIT_WINDOW = 15 * 60 * 1000;
     var REACTIONS = ['👍', '✅', '👀', '🙏', '❤️', '😂'];
-    var finePointer = window.matchMedia('(pointer: fine)').matches;
 
     // --- Rythme : actif (interaction récente), au repos, ou onglet en arrière-plan ---
     // lastInteraction règle le rythme (l'ouverture de la page compte) ; lastInput, lui, ne compte que les vraies
@@ -125,7 +124,8 @@
         var re = /\bhttps?:\/\/[^\s<]+/gi, last = 0, m;
         var lines = function (s) {
             s.split('\n').forEach(function (part, i) {
-                if (i > 0) { el.appendChild(document.createElement('br')); }
+                // Le « \n » après <br> garde le texte d'origine (textContent) pour la modification.
+                if (i > 0) { el.appendChild(document.createElement('br')); el.appendChild(document.createTextNode('\n')); }
                 if (part) { el.appendChild(document.createTextNode(part)); }
             });
         };
@@ -237,7 +237,7 @@
     function actionsButton() {
         var b = el('button', 'kb-msg-actions-btn');
         b.type = 'button'; b.setAttribute('data-msg-actions', ''); b.setAttribute('aria-label', 'Actions sur ce message');
-        b.hidden = !finePointer;
+        b.hidden = false;
         b.appendChild(icon('ellipsis'));
         return b;
     }
@@ -248,6 +248,7 @@
         li.setAttribute('data-mine', mine ? '1' : '0');
         li.setAttribute('data-created', ev.created_at);
         li.setAttribute('data-deleted', ev.deleted ? '1' : '0');
+        if (mine && ev.client_id) { li.setAttribute('data-client-id', ev.client_id); }
         if (isGroup && !mine) { li.appendChild(el('span', 'kb-msg-author', sender)); }
         li.appendChild(bubbleFor(ev, sender));
         var meta = el('span', 'kb-msg-meta'), t = el('time', 'kb-msg-time', hour(ev.created_at));
@@ -439,11 +440,14 @@
             input.value = input.value ? entry.text + '\n\n' + input.value : (entry.text || '');
             store(draftKey, input.value); grow();
             if (files && entry.attachments) { files.restore(entry.attachments); }
-            if (entry.client_id) { pendingClientId = entry.client_id; }
         };
-        // Au chargement : un message resté sans confirmation revient (texte, pièces déjà envoyées, même identifiant).
+        // Au chargement : un message resté sans confirmation revient (texte, pièces déjà envoyées).
+        // Déjà arrivé (présent dans la page) : on l'oublie. Son identifiant n'est repris que s'il est seul et renvoyé tel quel.
         var pendingClientId = null;
-        unsent().forEach(function (entry) { restore(entry); });
+        var leftover = unsent().filter(function (entry) { return !(entry.client_id && box.querySelector('[data-client-id="' + entry.client_id + '"]')); });
+        leftover.forEach(function (entry) { restore(entry); });
+        pendingClientId = leftover.length === 1 ? leftover[0].client_id || null : null;
+        var restoredText = leftover.length === 1 ? leftover[0].text || '' : null;
         store(unsentKey, '');
 
         var post = function (url, payload) {
@@ -487,7 +491,6 @@
             bubble.setAttribute('data-created', ev.created_at);
             bubble.id = 'm' + ev.message_id;
             bubble.classList.remove('is-pending', 'is-failed');
-            bubble.removeAttribute('data-client-id');
             var t = bubble.querySelector('.kb-msg-time');
             t.textContent = hour(ev.created_at); t.dateTime = ev.created_at;
             seen[ev.id] = true;
@@ -529,10 +532,17 @@
                 return;
             }
             if (files && files.busy()) { return; }
+            if (files && files.failed()) {
+                error.textContent = 'Une pièce jointe n\'a pas pu être envoyée : réessayez-la ou retirez-la avant d\'envoyer le message.';
+                error.hidden = false;
+                return;
+            }
             var attachments = files ? files.pending() : [];
             if (text.trim() === '' && attachments.length === 0) { input.focus(); return; }
-            var entry = { text: text, client_id: pendingClientId || newClientId(), attachments: attachments, reply_to: replyTo };
-            pendingClientId = null;
+            // L'identifiant restauré n'est réutilisé que si le texte n'a pas changé (sinon ce serait un autre message).
+            var reuse = pendingClientId && text === (restoredText || '').replace(/\s+$/, '');
+            var entry = { text: text, client_id: reuse ? pendingClientId : newClientId(), attachments: attachments, reply_to: replyTo };
+            pendingClientId = null; restoredText = null;
             // Bulle provisoire : le texte reste visible même si le réseau du chantier lâche.
             var bubble = buildEvent({
                 id: 0, type: 'message', sender_id: me, body: text, created_at: new Date().toISOString(), reply_to: replyTo,
@@ -643,7 +653,7 @@
             if (choice.hasAttribute('data-menu-react')) { react(id, choice.getAttribute('data-menu-react')); return; }
             var action = choice.getAttribute('data-menu');
             if (action === 'reply') {
-                editing = null;
+                if (editing) { cancelMode(); }
                 replyTo = { id: parseInt(id, 10), sender_name: authorOf(li), excerpt: excerptOf(li) };
                 setMode('Réponse à ' + replyTo.sender_name + ' : ' + replyTo.excerpt);
                 input.focus();
@@ -674,8 +684,8 @@
             if (menu && !inside) { closeMenu(); }
         });
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && menu) { var li = menuFor; closeMenu(); var b = li && li.querySelector('[data-msg-actions]'); if (b && !b.hidden) { b.focus(); } } });
-        // Boutons « Actions » des messages rendus par le serveur : visibles avec une souris.
-        if (finePointer) { box.querySelectorAll('[data-msg-actions]').forEach(function (b) { b.hidden = false; }); }
+        // Boutons « Actions » des messages rendus par le serveur (souris, écran tactile, lecteur d'écran).
+        box.querySelectorAll('[data-msg-actions]').forEach(function (b) { b.hidden = false; });
     }
 
     if (box) { scrollBottom(); }

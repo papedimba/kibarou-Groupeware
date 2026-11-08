@@ -343,7 +343,8 @@ a.kb-chat-sub { color: var(--kb-blue); padding: .2rem 0; }
 .kb-msg-actions-btn svg { width: 1.1rem; height: 1.1rem; }
 .kb-msg:hover .kb-msg-actions-btn, .kb-msg:focus-within .kb-msg-actions-btn, .kb-msg-actions-btn[aria-expanded="true"] { opacity: 1; }
 .kb-msg-actions-btn:hover { background: var(--kb-gray-200); color: var(--kb-text); }
-@media (pointer: coarse) { .kb-msg-actions-btn { display: none; } }
+/* Écran tactile : bouton toujours visible (un appui long sur une photo ouvre le menu du système, pas le nôtre). */
+@media (pointer: coarse) { .kb-msg-actions-btn { opacity: .75; } }
 .kb-msg-reactions { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .2rem; }
 .kb-reaction { min-height: 32px; min-width: 44px; padding: 0 .55rem; border-radius: 999px; border: 1px solid var(--kb-gray-200); background: #fff;
     font-size: .85rem; line-height: 1; color: var(--kb-text); }

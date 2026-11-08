@@ -104,11 +104,15 @@ final class ChatAttachmentService
     /** Pièces envoyées mais jamais rattachées à un message (onglet fermé, envoi abandonné) depuis plus de 24 h. */
     public function purgeOrphans(): int
     {
-        $rows = $this->db->fetchAll('SELECT * FROM chat_attachments WHERE message_id IS NULL AND created_at < UTC_TIMESTAMP() - INTERVAL 24 HOUR');
+        // Verrou partagé avec l'envoi (ChatService::send, FOR UPDATE) : une pièce rattachée entre-temps n'est jamais effacée.
+        $rows = $this->db->transaction(function () {
+            $rows = $this->db->fetchAll('SELECT * FROM chat_attachments WHERE message_id IS NULL AND created_at < UTC_TIMESTAMP() - INTERVAL 24 HOUR FOR UPDATE');
+            foreach ($rows as $row) {
+                $this->db->run('DELETE FROM chat_attachments WHERE id = ? AND message_id IS NULL', [$row['id']]);
+            }
+            return $rows;
+        });
         $this->deleteFiles($rows);
-        foreach ($rows as $row) {
-            $this->db->run('DELETE FROM chat_attachments WHERE id = ?', [$row['id']]);
-        }
         return count($rows);
     }
 
@@ -179,7 +183,8 @@ final class ChatAttachmentService
         if ($zip->open($tmp, \ZipArchive::RDONLY) !== true) {
             return false;
         }
-        $types = (string) $zip->getFromName('[Content_Types].xml');
+        // Lecture bornée à 64 Ko : une « bombe » de décompression ne peut pas saturer la mémoire.
+        $types = (string) $zip->getFromName('[Content_Types].xml', 65536);
         $macros = false;
         for ($i = 0; $i < $zip->numFiles; $i++) {
             if (str_ends_with(strtolower((string) $zip->getNameIndex($i)), 'vbaproject.bin')) {

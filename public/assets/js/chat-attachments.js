@@ -48,6 +48,12 @@
     var attach = form.querySelector('[data-chat-attach]');
     var input = form.querySelector('[data-chat-file]');
     attach.hidden = false;
+    // Annonces pour les lecteurs d'écran : fin d'envoi ou échec de chaque fichier.
+    var status = document.createElement('p');
+    status.className = 'visually-hidden'; status.setAttribute('aria-live', 'polite'); status.setAttribute('data-chat-tray-status', '');
+    form.appendChild(status);
+    function announce(text) { status.textContent = text; }
+    function changed() { form.dispatchEvent(new Event('kb-attachments-change')); }
 
     function render(item) {
         var li = item.el || document.createElement('li');
@@ -102,6 +108,9 @@
         items.splice(items.indexOf(item), 1);
         item.el.remove();
         tray.hidden = items.length === 0;
+        // xhr.abort() ne déclenche ni onload ni onerror : il faut prévenir le formulaire ici.
+        changed();
+        input.focus();
     }
 
     function upload(item) {
@@ -113,8 +122,13 @@
         item.xhr = xhr;
         xhr.open('POST', base + 'api/chat/conversations/' + cid + '/attachments');
         xhr.setRequestHeader('Accept', 'application/json');
+        // Progression : mise à jour en place (reconstruire l'élément ferait perdre le focus clavier).
         xhr.upload.onprogress = function (e) {
-            if (e.lengthComputable) { item.progress = Math.round(e.loaded / e.total * 100); render(item); }
+            if (!e.lengthComputable || !item.el) { return; }
+            item.progress = Math.round(e.loaded / e.total * 100);
+            var bar = item.el.querySelector('progress'), st = item.el.querySelector('.kb-tray-status');
+            if (bar) { bar.value = item.progress; }
+            if (st) { st.textContent = 'Envoi… ' + item.progress + ' %'; }
         };
         xhr.onload = function () {
             item.xhr = null;
@@ -130,12 +144,14 @@
                     : (res.errors && res.errors.file) || res.error || 'Envoi impossible.';
             }
             render(item);
-            form.dispatchEvent(new Event('kb-attachments-change'));
+            announce(item.state === 'done' ? item.name + ' envoyé.' : item.name + ' : ' + item.error);
+            changed();
         };
         xhr.onerror = function () {
             item.xhr = null; item.state = 'failed'; item.retry = true; item.error = 'Réseau indisponible.';
             render(item);
-            form.dispatchEvent(new Event('kb-attachments-change'));
+            announce(item.name + ' : ' + item.error);
+            changed();
         };
         xhr.send(data);
     }
@@ -175,6 +191,8 @@
                 .map(function (i) { return { id: i.id, kind: i.kind, name: i.name, size: i.size, thumb_url: i.thumb_url }; });
         },
         busy: function () { return items.some(function (i) { return i.state === 'uploading' || i.state === 'waiting'; }); },
+        // Une pièce en échec n'est jamais abandonnée en silence : l'envoi est bloqué tant qu'elle reste là.
+        failed: function () { return items.some(function (i) { return i.state === 'failed'; }); },
         clear: function () { items.slice().forEach(function (i) { if (i.preview) { URL.revokeObjectURL(i.preview); } }); items = []; tray.textContent = ''; tray.hidden = true; },
         // Pièces déjà envoyées d'un message resté sans confirmation (rechargement de la page).
         restore: function (list) {

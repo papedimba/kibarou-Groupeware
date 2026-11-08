@@ -155,7 +155,8 @@ async function minBorderContrast(p, selector) {
 
   // Lot 3 : la cloche se met à jour sans rechargement et l'alerte passe par le service worker.
   await page.goto(base + '/');
-  await page.waitForFunction(async () => !!(await navigator.serviceWorker.getRegistration()), null, { timeout: 10000 });
+  // Attente réelle du service worker actif (waitForFunction ne sait pas attendre une promesse : evaluate le peut).
+  await page.evaluate(() => Promise.race([navigator.serviceWorker.ready.then(() => true), new Promise((_, no) => setTimeout(() => no(new Error('service worker non actif')), 10000))]));
   const title = 'Smoke ' + Date.now();
   execFileSync('php', ['-r', `require 'vendor/autoload.php'; $a = App\\Core\\App::boot(getcwd());
     $id = (int) $a->db()->value('SELECT id FROM users WHERE email = ?', [getenv('KB_EMAIL')]);
