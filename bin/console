@@ -64,6 +64,8 @@ try {
                 echo "Une exécution est déjà en cours.\n";
                 break;
             }
+            $digests = (new \App\Modules\Notifications\DigestService($app->db(), $app->mailQueue(), (string) $app->config('app.url')))
+                ->run(new DateTimeImmutable('now', new DateTimeZone((string) $app->config('app.timezone'))));
             $queue = $app->mailQueue();
             $queue->releaseStale();
             $mailer = new Mailer((array) $app->config('mail'), (string) $app->config('paths.storage') . '/logs');
@@ -78,7 +80,7 @@ try {
                  ON DUPLICATE KEY UPDATE `value` = VALUES(`value`), updated_at = VALUES(updated_at)",
                 [now_utc()],
             );
-            echo sprintf("Emails envoyés : %d, échecs : %d. Nettoyage : %s\n", $stats['sent'], $stats['failed'], json_encode($cleaned));
+            echo sprintf("Récapitulatifs : %d. Emails envoyés : %d, échecs : %d. Nettoyage : %s\n", $digests, $stats['sent'], $stats['failed'], json_encode($cleaned));
             flock($lock, LOCK_UN);
             break;
 
