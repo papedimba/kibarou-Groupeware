@@ -55,7 +55,7 @@ final class ChatService
                 ]);
                 $created = $this->event($cid, 'created', $me);
                 foreach ([$me, $otherId] as $uid) {
-                    $this->db->insert('conversation_members', ['conversation_id' => $cid, 'user_id' => $uid, 'joined_event_id' => $created]);
+                    $this->db->insert('conversation_members', ['conversation_id' => $cid, 'user_id' => $uid, 'joined_event_id' => $created, 'entered_event_id' => $created]);
                 }
                 return $cid;
             });
@@ -80,6 +80,7 @@ final class ChatService
     {
         $me = (int) $actor['id'];
         $membership = $this->requireMember($me, $conversationId);
+        self::requireWritable($membership);
         if ($clientId !== null && $clientId !== '') {
             if (!preg_match('/^[a-f0-9]{32}$/', $clientId)) {
                 throw new ValidationException(['body' => 'Identifiant de message invalide.']);
@@ -156,7 +157,7 @@ final class ChatService
     public function uploadAttachment(array $actor, int $conversationId, array $file): array
     {
         $me = (int) $actor['id'];
-        $this->requireMember($me, $conversationId);
+        self::requireWritable($this->requireMember($me, $conversationId));
         $recent = (int) $this->db->value('SELECT COUNT(*) FROM chat_attachments WHERE uploader_id = ? AND created_at > UTC_TIMESTAMP() - INTERVAL 1 MINUTE', [$me]);
         if ($recent >= self::MAX_FILES_PER_MINUTE) {
             throw new HttpException(429, 'Trop de fichiers en peu de temps. Patientez une minute.');
@@ -223,6 +224,7 @@ final class ChatService
         if ($message['deleted_at'] !== null) {
             throw new HttpException(404);
         }
+        self::requireWritable($this->requireMember($me, (int) $message['conversation_id']));
         if (!in_array($emoji, self::REACTIONS, true)) {
             throw new ValidationException(['emoji' => 'Réaction inconnue.']);
         }
@@ -240,6 +242,7 @@ final class ChatService
     {
         $me = (int) $actor['id'];
         $message = $this->repo->visibleMessage($me, $messageId) ?? throw new HttpException(404);
+        self::requireWritable($this->requireMember($me, (int) $message['conversation_id']));
         $tooOld = strtotime($message['created_at'] . ' UTC') < time() - self::EDIT_WINDOW_SECONDS;
         if ((int) $message['sender_id'] !== $me || $message['deleted_at'] !== null || $tooOld) {
             throw new ValidationException(['body' => $refusal]);
@@ -285,10 +288,10 @@ final class ChatService
         $cid = (int) $membership['conversation_id'];
         $url = '/chat/' . $cid;
         $title = 'Nouveau message de ' . $actor['first_name'] . ' ' . $actor['last_name']
-            . ($membership['type'] === 'group' ? ' dans ' . $membership['name'] : '');
+            . ($membership['type'] !== 'direct' ? ' dans ' . $membership['name'] : '');
         $recipients = $this->db->fetchAll(
             "SELECT cm.user_id FROM conversation_members cm
-             WHERE cm.conversation_id = ? AND cm.user_id <> ? AND cm.left_at IS NULL
+             WHERE cm.conversation_id = ? AND cm.user_id <> ? AND cm.left_at IS NULL AND cm.notify = 1
                AND (cm.last_read_at IS NULL OR cm.last_read_at < UTC_TIMESTAMP() - INTERVAL 2 MINUTE)
                AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.user_id = cm.user_id AND n.type = 'chat.message' AND n.url = ? AND n.read_at IS NULL)",
             [$cid, $actor['id'], $url],
@@ -314,9 +317,9 @@ final class ChatService
         $cid = $this->db->transaction(function () use ($me, $name, $ids) {
             $cid = $this->db->insert('conversations', ['type' => 'group', 'name' => $name, 'created_by' => $me, 'created_at' => now_utc(), 'last_event_at' => now_utc()]);
             $created = $this->event($cid, 'created', $me);
-            $this->db->insert('conversation_members', ['conversation_id' => $cid, 'user_id' => $me, 'joined_event_id' => $created]);
+            $this->db->insert('conversation_members', ['conversation_id' => $cid, 'user_id' => $me, 'joined_event_id' => $created, 'entered_event_id' => $created]);
             foreach ($ids as $uid) {
-                $this->db->insert('conversation_members', ['conversation_id' => $cid, 'user_id' => $uid, 'joined_event_id' => $created]);
+                $this->db->insert('conversation_members', ['conversation_id' => $cid, 'user_id' => $uid, 'joined_event_id' => $created, 'entered_event_id' => $created]);
                 $this->event($cid, 'member_added', $me, $uid);
             }
             return $cid;
@@ -345,9 +348,10 @@ final class ChatService
                 $before = (int) $this->db->value('SELECT COALESCE(MAX(id), 0) FROM chat_events WHERE conversation_id = ?', [$cid]);
                 $this->event($cid, 'member_added', $me, $uid);
                 $this->db->run(
-                    'INSERT INTO conversation_members (conversation_id, user_id, joined_event_id, left_at, last_read_event_id)
-                     VALUES (?, ?, ?, NULL, ?) ON DUPLICATE KEY UPDATE joined_event_id = VALUES(joined_event_id), left_at = NULL, last_read_event_id = VALUES(last_read_event_id), last_read_at = NULL',
-                    [$cid, $uid, $before, $before],
+                    'INSERT INTO conversation_members (conversation_id, user_id, joined_event_id, entered_event_id, left_at, last_read_event_id)
+                     VALUES (?, ?, ?, ?, NULL, ?) ON DUPLICATE KEY UPDATE joined_event_id = VALUES(joined_event_id), entered_event_id = VALUES(entered_event_id),
+                     left_at = NULL, last_read_event_id = VALUES(last_read_event_id), last_read_at = NULL',
+                    [$cid, $uid, $before, $before, $before],
                 );
                 $this->audit->log($me, 'chat.member_added', 'conversation', $cid);
             }
@@ -384,8 +388,8 @@ final class ChatService
         return $this->repo->membership($userId, $conversationId) ?? throw new HttpException(404);
     }
 
-    /** Ajoute un évènement et met à jour la date de dernière activité de la conversation. */
-    private function event(int $conversationId, string $type, ?int $actorId, ?int $targetId = null, ?int $messageId = null, ?string $detail = null, bool $touch = true): int
+    /** Ajoute un évènement et met à jour la date de dernière activité de la conversation (aussi utilisé par ChannelService). */
+    public function event(int $conversationId, string $type, ?int $actorId, ?int $targetId = null, ?int $messageId = null, ?string $detail = null, bool $touch = true): int
     {
         $id = $this->db->insert('chat_events', [
             'conversation_id' => $conversationId, 'type' => $type, 'message_id' => $messageId,
@@ -396,6 +400,14 @@ final class ChatService
             $this->db->run('UPDATE conversations SET last_event_at = UTC_TIMESTAMP() WHERE id = ?', [$conversationId]);
         }
         return $id;
+    }
+
+    /** Salon archivé : lecture seule. @param array<string,mixed> $membership */
+    public static function requireWritable(array $membership): void
+    {
+        if (!empty($membership['archived_at'])) {
+            throw new ValidationException(['body' => 'Ce salon est archivé : il n\'accepte plus de messages.']);
+        }
     }
 
     /** @return array<string,mixed> */

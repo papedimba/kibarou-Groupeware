@@ -4,7 +4,10 @@ $currentId = $conversation !== null ? (int) $conversation['id'] : 0;
 ?>
 <div class="kb-chat-list-head">
     <h1 class="h5 m-0 fw-bold">Messagerie</h1>
-    <a class="btn btn-primary btn-sm kb-chat-new" href="<?= e(url('/chat/new')) ?>"><i data-lucide="square-pen" aria-hidden="true"></i> Nouvelle conversation</a>
+    <div class="kb-chat-list-actions">
+        <a class="btn btn-light btn-sm kb-chat-new" href="<?= e(url('/chat/channels')) ?>"><i data-lucide="hash" aria-hidden="true"></i> Salons</a>
+        <a class="btn btn-primary btn-sm kb-chat-new" href="<?= e(url('/chat/new')) ?>"><i data-lucide="square-pen" aria-hidden="true"></i> Nouvelle conversation</a>
+    </div>
 </div>
 <?php if ($conversations === []): ?>
     <p class="kb-chat-empty">Aucune conversation pour l'instant.<br>Écrivez à un collègue depuis l'annuaire ou créez un groupe.</p>
@@ -14,8 +17,8 @@ $currentId = $conversation !== null ? (int) $conversation['id'] : 0;
             <?php $unread = (int) $c['unread']; $active = (int) $c['id'] === $currentId; ?>
             <li>
                 <a class="kb-chat-item<?= $unread > 0 ? ' is-unread' : '' ?><?= $active ? ' is-active' : '' ?>" href="<?= e(url('/chat/' . (int) $c['id'])) ?>"<?= $active ? ' aria-current="page"' : '' ?> data-conversation-id="<?= (int) $c['id'] ?>">
-                    <?php if ($c['type'] === 'group'): ?>
-                        <span class="kb-avatar kb-avatar-group" aria-hidden="true"><i data-lucide="users"></i></span>
+                    <?php if ($c['type'] !== 'direct'): ?>
+                        <span class="kb-avatar kb-avatar-group" aria-hidden="true"><i data-lucide="<?= $c['type'] === 'channel' ? 'hash' : ($c['type'] === 'department' ? 'building-2' : 'users') ?>"></i></span>
                     <?php else: ?>
                         <?= avatar(['id' => $c['other_id'], 'first_name' => $c['other_first_name'], 'last_name' => $c['other_last_name'], 'avatar_path' => $c['other_avatar_path']]) ?>
                     <?php endif; ?>

@@ -156,6 +156,29 @@ function day_label(string $utc): string
     };
 }
 
+/**
+ * Texte d'un évènement système de conversation (même règle que systemText() dans chat.js).
+ * $type : type de la conversation ; un acteur absent signifie « l'annuaire » (salons de service).
+ * @param array<string,mixed> $ev
+ */
+function chat_system_text(array $ev, int $me, string $type): string
+{
+    $word = $type === 'group' ? 'groupe' : 'salon';
+    $actorId = $ev['actor_id'] !== null ? (int) $ev['actor_id'] : null;
+    $targetId = $ev['target_user_id'] !== null ? (int) $ev['target_user_id'] : null;
+    $actor = $actorId === $me ? 'Vous avez' : $ev['actor_name'] . ' a';
+    $target = $targetId === $me ? 'Vous avez' : $ev['target_name'] . ' a';
+    return match ($ev['type']) {
+        'member_added' => $actorId === null || $actorId === $targetId ? $target . ' rejoint le ' . $word
+            : ($targetId === $me ? $ev['actor_name'] . ' vous a ajouté' : $actor . ' ajouté ' . $ev['target_name']),
+        'member_left' => ($actorId === null ? $target : $actor) . ' quitté le ' . $word,
+        'renamed' => $actorId === null ? 'Le salon a été renommé en « ' . $ev['detail'] . ' »' : $actor . ' renommé le ' . $word . ' en « ' . $ev['detail'] . ' »',
+        'archived' => $actorId === null ? 'Le salon a été archivé' : $actor . ' archivé le salon',
+        'unarchived' => $actorId === null ? 'Le salon a été rouvert' : $actor . ' rouvert le salon',
+        default => '',
+    };
+}
+
 /** Taille lisible : « 840 octets », « 240 Ko », « 1,5 Mo », « 2,1 Go ». */
 function format_bytes(int $bytes): string
 {

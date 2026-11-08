@@ -37,6 +37,9 @@ final class AuditLabels
         'chat.member_added' => 'Membre ajouté à un groupe',
         'chat.member_left' => 'Groupe de messagerie quitté',
         'chat.message_deleted' => 'Message de messagerie supprimé',
+        'chat.channel_created' => 'Salon créé',
+        'chat.channel_updated' => 'Salon modifié',
+        'chat.channel_archived' => 'Salon archivé',
         'profile.photo_updated' => 'Photo modifiée',
         'user.photo_removed' => 'Photo retirée',
     ];

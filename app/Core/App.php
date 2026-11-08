@@ -6,6 +6,7 @@ namespace App\Core;
 
 use App\Modules\Auth\AuthService;
 use App\Modules\Auth\PasswordResetService;
+use App\Modules\Chat\ChannelService;
 use App\Modules\Chat\ChatAttachmentService;
 use App\Modules\Chat\ChatRepository;
 use App\Modules\Chat\ChatService;
@@ -138,6 +139,11 @@ final class App
         return $this->service(ChatService::class, fn () => new ChatService($this->db(), new ChatRepository($this->db()), $this->rbac(), $this->audit(), $this->notifier(), $this->chatAttachments()));
     }
 
+    public function channels(): ChannelService
+    {
+        return $this->service(ChannelService::class, fn () => new ChannelService($this->db(), $this->chat(), $this->rbac(), $this->audit()));
+    }
+
     public function chatAttachments(): ChatAttachmentService
     {
         return $this->service(ChatAttachmentService::class, fn () => new ChatAttachmentService($this->db(), $this->config['paths']['storage'] . '/private'));
@@ -168,7 +174,7 @@ final class App
     /** Réinitialise les services liés à une requête (utile pour enchaîner des requêtes en test). */
     public function resetRequestState(): void
     {
-        unset($this->services[Session::class], $this->services[AuthService::class], $this->services[Rbac::class], $this->services[PresenceService::class], $this->services[ChatService::class]);
+        unset($this->services[Session::class], $this->services[AuthService::class], $this->services[Rbac::class], $this->services[PresenceService::class], $this->services[ChatService::class], $this->services[ChannelService::class]);
     }
 
     /**

@@ -74,6 +74,14 @@ final class ChatController extends Controller
         return $this->groupAction($request, fn ($cid) => $this->app->chat()->rename($this->user(), $cid, $request->str('name')), 'Groupe renommé.');
     }
 
+    /** Alertes de cette conversation (interrupteur de l'en-tête). */
+    public function notify(Request $request): Response
+    {
+        $on = $request->str('on') === '1';
+        $this->app->channels()->setNotify($this->user(), $this->id($request), $on);
+        return $this->redirect('/chat/' . $this->id($request), $on ? 'Alertes activées pour cette conversation.' : 'Alertes coupées pour cette conversation.');
+    }
+
     public function leave(Request $request): Response
     {
         $this->app->chat()->leave($this->user(), $this->id($request));
@@ -253,6 +261,7 @@ final class ChatController extends Controller
             $data['events'] = $events;
             $data['members'] = $repo->members($cid);
             $data['lastEventId'] = $events !== [] ? (int) end($events)['id'] : (int) $membership['joined_event_id'];
+            $data['canManage'] = $this->app->channels()->canManage($this->user(), $membership);
             $data['people'] = $membership['type'] === 'group' ? (new UserRepository($this->app->db()))->options() : [];
         }
         return $this->view('chat/index', $data);

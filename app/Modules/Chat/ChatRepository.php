@@ -17,7 +17,7 @@ final class ChatRepository
     public function membership(int $userId, int $conversationId): ?array
     {
         return $this->db->fetch(
-            'SELECT cm.*, c.type, c.name FROM conversation_members cm JOIN conversations c ON c.id = cm.conversation_id
+            'SELECT cm.*, c.type, c.name, c.description, c.archived_at, c.department_id, c.created_by FROM conversation_members cm JOIN conversations c ON c.id = cm.conversation_id
              WHERE cm.conversation_id = ? AND cm.user_id = ? AND cm.left_at IS NULL',
             [$conversationId, $userId],
         );
@@ -79,7 +79,7 @@ final class ChatRepository
     public function conversationsFor(int $userId, int $openId = 0): array
     {
         $rows = $this->db->fetchAll(
-            "SELECT c.id, c.type, c.name, c.last_event_at, " . self::UNREAD . " AS unread,
+"SELECT c.id, c.type, c.name, c.description, c.archived_at, c.last_event_at, cm.notify, " . self::UNREAD . " AS unread,
                     (SELECT le.message_id FROM chat_events le
                      WHERE le.conversation_id = c.id AND le.type = 'message' AND le.id > cm.joined_event_id ORDER BY le.id DESC LIMIT 1) AS last_message_id,
                     o.id AS other_id, o.first_name AS other_first_name, o.last_name AS other_last_name, o.avatar_path AS other_avatar_path
@@ -89,7 +89,7 @@ final class ChatRepository
              LEFT JOIN users o ON o.id = om.user_id
              WHERE cm.user_id = ? AND cm.left_at IS NULL
                -- Une conversation privée ouverte sans message n'apparaît que chez celui qui l'a ouverte.
-               AND (c.type = 'group' OR c.created_by = cm.user_id OR c.id = ?
+               AND (c.type <> 'direct' OR c.created_by = cm.user_id OR c.id = ?
                     OR EXISTS (SELECT 1 FROM chat_events x WHERE x.conversation_id = c.id AND x.type = 'message'))
              ORDER BY c.last_event_at DESC, c.id DESC",
             [$userId, $openId],
@@ -106,7 +106,7 @@ final class ChatRepository
                 default => self::excerpt((string) $m['body'], $files[(int) $m['id']] ?? []),
             };
             $r['unread'] = (int) $r['unread'];
-            $r['title'] = $r['type'] === 'group' ? (string) $r['name'] : trim($r['other_first_name'] . ' ' . $r['other_last_name']);
+            $r['title'] = $r['type'] !== 'direct' ? (string) $r['name'] : trim($r['other_first_name'] . ' ' . $r['other_last_name']);
             return $r;
         }, $rows);
     }

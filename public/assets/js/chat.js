@@ -10,9 +10,11 @@
     var cid = conv ? parseInt(conv.getAttribute('data-chat-conversation'), 10) : 0;
     var me = conv ? parseInt(conv.getAttribute('data-me'), 10) : 0;
     var isGroup = conv ? conv.getAttribute('data-group') === '1' : false;
+    var convType = conv ? conv.getAttribute('data-type') || 'direct' : 'direct';
     var lastEvent = conv ? parseInt(conv.getAttribute('data-last-event'), 10) || 0 : 0;
     var box = conv ? conv.querySelector('[data-chat-messages]') : null;
-    var csrf = form ? form.querySelector('input[name=_csrf]').value : '';
+    // Jeton pris dans n'importe quel formulaire de la messagerie (un salon archivé n'a pas de zone de saisie).
+    var csrf = (document.querySelector('[data-chat] input[name=_csrf]') || { value: '' }).value;
     var root = document.querySelector('[data-chat]');
     if (!root) { return; }
     var cfg = root;
@@ -140,11 +142,20 @@
         }
         lines(text.slice(last));
     }
+    // Même règle que chat_system_text() (app/Core/helpers.php).
     function systemText(ev) {
-        var byMe = ev.actor_id === me, actor = byMe ? 'Vous avez' : ev.actor_name + ' a';
-        if (ev.type === 'member_added') { return ev.target_user_id === me ? ev.actor_name + ' vous a ajouté' : actor + ' ajouté ' + ev.target_name; }
-        if (ev.type === 'member_left') { return actor + ' quitté le groupe'; }
-        if (ev.type === 'renamed') { return actor + ' renommé le groupe en « ' + (ev.detail || '') + ' »'; }
+        var word = convType === 'group' ? 'groupe' : 'salon';
+        var actor = ev.actor_id === me ? 'Vous avez' : ev.actor_name + ' a';
+        var target = ev.target_user_id === me ? 'Vous avez' : ev.target_name + ' a';
+        var auto = ev.actor_id === null;
+        if (ev.type === 'member_added') {
+            if (auto || ev.actor_id === ev.target_user_id) { return target + ' rejoint le ' + word; }
+            return ev.target_user_id === me ? ev.actor_name + ' vous a ajouté' : actor + ' ajouté ' + ev.target_name;
+        }
+        if (ev.type === 'member_left') { return (auto ? target : actor) + ' quitté le ' + word; }
+        if (ev.type === 'renamed') { return auto ? 'Le salon a été renommé en « ' + (ev.detail || '') + ' »' : actor + ' renommé le ' + word + ' en « ' + (ev.detail || '') + ' »'; }
+        if (ev.type === 'archived') { return auto ? 'Le salon a été archivé' : actor + ' archivé le salon'; }
+        if (ev.type === 'unarchived') { return auto ? 'Le salon a été rouvert' : actor + ' rouvert le salon'; }
         return '';
     }
     function buildEvent(ev) {

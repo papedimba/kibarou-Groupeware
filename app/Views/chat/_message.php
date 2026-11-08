@@ -1,15 +1,8 @@
 <?php
-/** Un évènement de conversation. @var array<string,mixed> $ev @var int $me @var bool $isGroup */
+/** Un évènement de conversation. @var array<string,mixed> $ev @var int $me @var bool $isGroup @var string $convType */
 $id = (int) $ev['id'];
 if ($ev['type'] !== 'message'):
-    $byMe = (int) $ev['actor_id'] === $me;
-    $actor = $byMe ? 'Vous avez' : $ev['actor_name'] . ' a';
-    $text = match ($ev['type']) {
-        'member_added' => (int) $ev['target_user_id'] === $me ? $ev['actor_name'] . ' vous a ajouté' : $actor . ' ajouté ' . $ev['target_name'],
-        'member_left' => $actor . ' quitté le groupe',
-        'renamed' => $actor . ' renommé le groupe en « ' . $ev['detail'] . ' »',
-        default => '',
-    };
+    $text = chat_system_text($ev, $me, $convType ?? ($isGroup ? 'group' : 'direct'));
 ?>
     <li class="kb-msg-system" data-event-id="<?= $id ?>"><?= e($text) ?> · <?= e(format_date((string) $ev['created_at'], 'H:i')) ?></li>
 <?php else:

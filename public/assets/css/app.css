@@ -400,3 +400,33 @@ a.kb-chat-sub { color: var(--kb-blue); padding: .2rem 0; }
 .kb-viewer-count { position: absolute; bottom: max(1rem, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); color: #fff; font-size: .9rem; }
 body.kb-viewer-open { overflow: hidden; }
 .kb-chat-send:disabled { opacity: .55; }
+
+/* Messagerie 4c : salons */
+.kb-chat-list-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.kb-chat-notify { margin-left: auto; }
+.kb-chat-notify .btn { min-height: 44px; display: inline-flex; align-items: center; gap: .35rem; }
+.kb-chat-notify svg { width: 1.05rem; height: 1.05rem; }
+.kb-chat-notify .btn[aria-pressed="true"] { color: var(--kb-blue); }
+.kb-chat-salon-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem; padding: 0 .75rem; border-bottom: 1px solid var(--kb-gray-200); }
+.kb-chat-salon-actions .btn { min-height: 44px; }
+.kb-chat-salon-actions:empty { display: none; }
+.kb-chat-archived { display: flex; align-items: center; gap: .5rem; padding: .5rem 1rem; background: #fff7ed; color: #9a3412; font-size: .875rem; border-bottom: 1px solid #fed7aa; }
+.kb-chat-archived svg { width: 1rem; height: 1rem; }
+.kb-chat-compose-closed { margin: 0; justify-content: center; color: var(--kb-gray-500); font-size: .9rem; }
+.kb-tabs { display: flex; gap: .25rem; margin-bottom: 1rem; border-bottom: 1px solid var(--kb-gray-200); }
+.kb-tabs a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 1rem; color: var(--kb-gray-500); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.kb-tabs a[aria-current="page"] { color: var(--kb-night); font-weight: 600; border-bottom-color: var(--kb-blue); }
+.kb-channels { list-style: none; margin: 0; padding: 0; background: #fff; border: 1px solid var(--kb-gray-200); border-radius: 12px; overflow: hidden; }
+.kb-channel { display: flex; align-items: center; gap: .9rem; padding: .75rem 1rem; }
+.kb-channel + .kb-channel { border-top: 1px solid var(--kb-gray-200); }
+.kb-channel-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.kb-channel-name { font-weight: 600; }
+.kb-channel-meta { color: var(--kb-gray-500); font-size: .875rem; }
+.kb-channel-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.kb-channel-actions .btn { min-height: 44px; }
+@media (max-width: 767.98px) {
+    .kb-channel { flex-wrap: wrap; }
+    .kb-channel-actions { width: 100%; }
+    .kb-chat-notify-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+}
+.kb-chat-salon-actions form { margin: 0; display: flex; }
