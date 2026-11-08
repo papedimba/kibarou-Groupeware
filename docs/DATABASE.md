@@ -68,6 +68,17 @@ Permissions livrées : `admin.access`, `users.view`, `users.manage`, `organizati
 
 `settings.digest_last_date` mémorise le dernier récapitulatif quotidien (jour local). Nettoyage : lues > 90 jours, toutes > 365 jours.
 
+## Lot 4a : messagerie (migration 0005)
+
+| Table | Rôle |
+|---|---|
+| `conversations` | `type` (direct, group), `name` (groupes), `direct_key` unique « petitId:grandId » (une seule conversation privée par paire), `last_event_at` pour le tri |
+| `conversation_members` | Clé (conversation, utilisateur) ; `joined_event_id` (rien d'antérieur n'est visible), `left_at`, `last_read_event_id` et `last_read_at` (un entier par membre suffit au compteur de non-lus) |
+| `messages` | Texte (4 000 caractères au plus), expéditeur (`SET NULL` si le compte est supprimé) |
+| `chat_events` | Journal append-only, curseur de l'interrogation : `created`, `message`, `member_added`, `member_left`, `renamed` |
+
+Le contenu des messages n'est jamais copié dans les notifications, les emails ni le journal d'audit.
+
 ## Modèle prévu des lots suivants (analyse préalable)
 
 Tables listées dans le cahier des charges, avec les décisions de modélisation prises pour éviter les redondances :

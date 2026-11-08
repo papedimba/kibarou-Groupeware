@@ -75,6 +75,18 @@ $db->transaction(function () use ($db, $hash, $now, $app) {
         $db->insert('user_presence', ['user_id' => $ids[$login], 'status' => $status, 'site_label' => $site, 'start_date' => $today,
             'until_date' => $until, 'set_by' => $ids[$login], 'updated_at' => $now]);
     }
+
+    // Messagerie : passe par ChatService pour que le journal d'évènements et les non-lus soient cohérents.
+    $u = static fn (string $login) => $db->fetch('SELECT * FROM users WHERE id = ?', [$ids[$login]]);
+    $chat = $app->chat();
+    $direct = $chat->directWith($u('moussa.traore'), $ids['seydou.coulibaly']);
+    $chat->send($u('moussa.traore'), $direct, "Bonjour Seydou, où en est le coulage de la dalle au Pont de Sotuba ?");
+    $chat->send($u('seydou.coulibaly'), $direct, "Ferraillage terminé ce matin, coulage prévu demain à 7 h si le béton est livré.");
+    $group = $chat->createGroup($u('moussa.traore'), 'Chantier Résidence Les Palmiers', [$ids['seydou.coulibaly'], $ids['fatou.kone']]);
+    $chat->send($u('fatou.kone'), $group, "Les plans d'exécution du bâtiment B sont à jour :\nhttps://kibarou.example/plans/palmiers-b");
+    $chat->send($u('moussa.traore'), $group, "Merci Fatou. Réunion de chantier jeudi à 9 h sur place.");
+    // Aucun email de démonstration : les notifications de messages sont considérées comme traitées.
+    $db->run("UPDATE notifications SET email_status = 'digested' WHERE type = 'chat.message'");
 });
 
 echo "Données de démonstration créées. Comptes *@demo.kibarou.local, mot de passe : $password\n";

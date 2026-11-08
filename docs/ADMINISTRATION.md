@@ -61,6 +61,14 @@ d'un utilisateur ferme ses sessions, pour que ses nouveaux droits s'appliquent t
 - **Alertes du navigateur** : sur PC et Android, quand l'intranet est ouvert (bouton « Activer les alertes du navigateur » dans les préférences). Sur iPhone : au lot 10, avec l'installation sur l'écran d'accueil.
 - Envoyées aujourd'hui : mot de passe modifié, compte réactivé, statut modifié ou effacé par un responsable.
 
+## Messagerie
+
+- Permission **Utiliser la messagerie** (`chat.use`), accordée par défaut aux rôles livrés ; le menu *Messagerie* affiche le nombre de messages non lus.
+- **Écrire** depuis une fiche de l'annuaire ouvre la conversation privée ; *Nouvelle conversation* permet aussi de créer un groupe (nom obligatoire, 51 membres au plus).
+- Dans un groupe, tout membre peut ajouter des personnes, le renommer ou le quitter. Les nouveaux venus ne voient pas les messages antérieurs.
+- Les conversations sont privées : un administrateur ne peut pas les lire. Le journal d'audit enregistre la création des groupes, les ajouts et les départs, jamais le contenu.
+- Un compte désactivé ne peut plus recevoir de messages ; ses messages passés restent visibles des autres membres.
+
 ## Surveillance
 L'**Accueil** d'un administrateur affiche des raccourcis et trois alertes : comptes pas encore connectés, échecs de connexion sur 24 h, emails en échec. **Administration › Vue d'ensemble** : utilisateurs actifs, connectés, échecs de connexion sur 24 h, emails en échec,
 et une alerte si la tâche CRON ne s'exécute plus. **Journal d'audit** : toutes les actions sensibles, en français, filtrables par type d'action.

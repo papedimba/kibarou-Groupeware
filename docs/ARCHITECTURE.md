@@ -75,7 +75,7 @@ pour que chaque domaine soit autonome. Les services transverses restent dans `ap
 - Messages utilisateur en français ; identifiants techniques (code, tables, permissions) en anglais.
 - Chaque action sensible écrit dans `audit_logs` via `AuditLogger`.
 
-## 5. Messagerie (lot 4) : conception prévue
+## 5. Messagerie (lot 4a réalisé : conversations privées et groupes)
 
 Le mutualisé interdit les processus permanents : la messagerie utilise du **polling HTTP adaptatif**.
 
@@ -89,6 +89,21 @@ Le mutualisé interdit les processus permanents : la messagerie utilise du **pol
   une migration vers un service temps réel externe (Pusher, Ably, Centrifugo hébergé…) remplace le transport
   sans toucher au modèle de données ni aux contrôleurs.
 
+**Réalisé au lot 4a** (`app/Modules/Chat`, conception : `docs/superpowers/specs/2026-11-08-messagerie-4a-design.md`) :
+
+- Journal `chat_events` (`created`, `message`, `member_added`, `member_left`, `renamed`) : curseur unique de l'interrogation ;
+  chaque membre ne voit que les évènements postérieurs à son arrivée (`joined_event_id`).
+- API : `GET /api/chat/updates?since=`, `GET /api/chat/conversations/{id}/history?before=`,
+  `POST /api/chat/conversations/{id}/messages` (JSON, en-tête `X-CSRF-Token`), `POST /api/chat/conversations/{id}/read`.
+- Session : les `GET /api/*` et l'accusé de lecture sans `active=1` sont **passifs** (ne prolongent pas la session) ;
+  envoyer un message est une activité.
+- `public/assets/js/chat.js` : objet `transport` (`poll` seul en 4a), rythme `chat.poll` (3 s actif, 10 s au repos,
+  30 s onglet caché), rendu par `textContent` (seuls les liens `http(s)` deviennent cliquables), brouillons en
+  `localStorage`, bulle « Non envoyé — Réessayer » en cas d'échec réseau. Sans JavaScript, la page reste utilisable
+  (envoi par formulaire classique).
+- Reporté aux lots 4b/4c : salons et salons de service, pièces jointes, réactions, réponses, modification et suppression,
+  accusés de lecture détaillés, indicateur de saisie, recherche.
+
 **Charge estimée** (hypothèse : 50 utilisateurs dont 30 actifs simultanément, intervalle moyen de 8 s) :
 environ 4 requêtes HTTP/s et 4 requêtes SQL légères/s. À confronter aux limites chiffrées de Likuid ; les
 intervalles sont configurables.
@@ -100,7 +115,7 @@ quand le navigateur est fermé (les emails de la file prennent le relais).
 
 - `Notifier::notify(userId, type, titre, lien, précision, auteur)` : appelée par les modules ; enregistre la notification et, selon la préférence effective, met un email en file (immédiat) ou le réserve au récapitulatif.
 - Interrogation : `GET /api/notifications?since=<id>` toutes les 60 s, onglet visible seulement ; met à jour la cloche ; les items `alert` sont affichés par le service worker d'affichage `/sw.js` (Android exige un service worker ; repli `new Notification` sur PC). Les appels `/api/*` sont passifs pour la session.
-- Ce même mécanisme d'interrogation servira de base à la messagerie (lot 4) ; le service worker sera enrichi au lot 10 (push, installation).
+- La messagerie (lot 4a) a sa propre interrogation, plus rapide ; `/api/notifications` renvoie aussi `chat_unread` pour le compteur du menu ; le service worker sera enrichi au lot 10 (push, installation).
 
 ## 6. Tâches planifiées
 

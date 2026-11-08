@@ -45,6 +45,15 @@ Contrôles : liste blanche d'extensions **et** de types MIME détectés par `fin
 taille maximale, nom d'origine assaini et stocké en base uniquement, réencodage des images, puis vérification de
 l'autorisation à chaque téléchargement (`Content-Disposition: attachment`, `nosniff`).
 
+## Messagerie (lot 4a)
+- Conversations **strictement privées** : seuls les membres lisent une conversation (404 sinon), aucun accès administrateur
+  au contenu ; un membre ajouté ne voit rien de ce qui précède son arrivée ; un membre parti ne voit plus rien.
+- Contenu affiché échappé ; seuls les liens `http(s)` sont rendus cliquables (`rel="noopener noreferrer"`), côté serveur
+  comme côté navigateur (construction DOM, jamais `innerHTML`).
+- Jeton CSRF exigé sur toutes les écritures, y compris l'API JSON (en-tête `X-CSRF-Token`).
+- Limite de 30 messages par minute et par personne (429) ; messages refusés vers un compte désactivé.
+- Notifications et emails sans contenu de message ; audit des actions de groupe sans contenu.
+
 ## Points ouverts / recommandations
 - **2FA (TOTP)** pour les super administrateurs : recommandée, prévue au lot 10.
 - **Adresse IP derrière un proxy** : seul `REMOTE_ADDR` est pris en compte. Si Likuid place un reverse proxy devant

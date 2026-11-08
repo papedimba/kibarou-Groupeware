@@ -42,7 +42,8 @@ Légende : ✅ terminé et testé · 🔜 prochain · ⏳ planifié
 | **1. Socle + authentification + administration** | Routeur, configuration, PDO, migrations, sessions en base, CSRF, en-têtes de sécurité, erreurs ; connexion, déconnexion, réinitialisation, limitation des tentatives, changement de mot de passe imposé ; utilisateurs, services, fonctions, rôles et permissions, sessions, audit, tableau de bord admin ; file d'emails + CRON ; installation CLI et web | ✅ |
 | 2. Annuaire + profil enrichi | Annuaire, fiche, organigramme par service, présence (statut déclaré + en ligne), deux téléphones, photo privée | ✅ |
 | 3. Notifications | Centrale, cloche, préférences, alertes navigateur PC/Android, emails immédiats et récapitulatif à 7 h | ✅ |
-| 4. Messagerie | Conversations privées, groupes, salons, salons de service, pièces jointes privées, réactions, réponses, modification, suppression logique, lus/non lus, accusés, présence, indicateur de saisie, recherche, polling adaptatif | 🔜 |
+| 4a. Messagerie : privé et groupes | Conversations privées, groupes, non-lus, interrogation adaptative, brouillons, envoi sans JavaScript | ✅ |
+| 4b/4c. Messagerie : suite | Salons, salons de service, pièces jointes privées, réactions, réponses, modification, suppression logique, accusés, indicateur de saisie, recherche | 🔜 |
 | 5. Calendrier + réunions | Événements, participants, invitations, rappels CRON, récurrence (RRULE simplifiée), export ICS ; convocations, ordre du jour, comptes rendus, décisions, actions | ⏳ |
 | 6. Tâches + projets | Tâches, Kanban, commentaires, pièces jointes, historique ; projets, membres, jalons, progression | ⏳ |
 | 7. Documents | Dossiers, versions, permissions, corbeille, téléchargement sécurisé, recherche | ⏳ |
@@ -88,3 +89,10 @@ Ordre justifié : l'annuaire et les notifications sont des dépendances de la me
 - Conception : `docs/superpowers/specs/2026-11-08-notifications-design.md` ; plan : `docs/superpowers/plans/2026-11-08-lot3-notifications.md`.
 - Livré : centrale d'envoi et catalogue des types, cloche et page « Mes notifications », préférences par type et par canal, interrogation passive toutes les 60 s, alertes navigateur sur PC et Android (service worker d'affichage), emails immédiats et récapitulatif quotidien à 7 h, branchements mot de passe / réactivation / statut, nettoyage.
 - Tests : 146 PHPUnit ; test de fumée Playwright sur Chromium complet (alerte réellement affichée) ; détecteur Impeccable sans signalement.
+
+### Lot 4a — Messagerie : conversations privées et groupes — 08/11/2026
+- Conception : `docs/superpowers/specs/2026-11-08-messagerie-4a-design.md` ; plan : `docs/superpowers/plans/2026-11-08-lot4a-messagerie.md`.
+- Livré : conversations privées (une par paire) et groupes (ajout, départ, renommage), journal d'évènements, non-lus par conversation et dans le menu, écrans PC (deux colonnes) et téléphone (liste puis conversation plein écran), envoi sans rechargement avec reprise après échec réseau, brouillons, envoi sans JavaScript, notifications sans contenu, limite de débit, session non prolongée par l'interrogation.
+- Correctif au passage : alerte du navigateur perdue si le service worker n'était pas encore prêt (lot 3).
+- Tests : 179 PHPUnit ; test de fumée Playwright avec échange réel entre deux comptes.
+- À mesurer chez Likuid : charge de l'interrogation (checklist de mise en production).

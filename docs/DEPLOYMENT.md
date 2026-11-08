@@ -39,6 +39,9 @@ pas de 777). Le fichier `.env` : 600 ou 640.
 Copier `.env.example` en `.env` (à la racine du projet, jamais dans `public/`) et renseigner :
 `APP_URL`, `DB_*`, `MAIL_*`, `APP_TIMEZONE`, et laisser `APP_ENV=production`, `APP_DEBUG=false`, `SESSION_SECURE=true`.
 
+Rythme d'interrogation de la messagerie (facultatif, en millisecondes) : `CHAT_POLL_ACTIVE_MS` (3000), `CHAT_POLL_IDLE_MS`
+(10000), `CHAT_POLL_BACKGROUND_MS` (30000). Si Likuid signale une charge trop élevée, augmenter d'abord `CHAT_POLL_IDLE_MS`.
+
 ## 5. Installation de la base et du premier compte
 
 ### Avec SSH
@@ -101,7 +104,8 @@ Elle envoie les emails en file et applique la politique de conservation. Si elle
 - [ ] Services, fonctions et comptes réels créés (aucune donnée de démonstration : `seed:demo` est refusé en production)
 - [ ] Sauvegarde automatique vérifiée et restauration testée
 - [ ] `composer audit` sans vulnérabilité connue
-- [ ] Test de fumée Playwright exécuté contre l'environnement de recette
+- [ ] Charge de la messagerie mesurée en recette (requêtes/minute dans les journaux d'accès avec 10 à 20 personnes connectées) et comparée aux limites Likuid ; rythme `CHAT_POLL_*` ajusté si besoin
+- [ ] Test de fumée Playwright exécuté contre l'environnement de recette (avec `KB_DEMO_EMAIL` / `KB_DEMO_PASSWORD` pour l'échange à deux comptes)
 
 ## 10. Développement local
 
