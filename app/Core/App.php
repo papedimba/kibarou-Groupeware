@@ -134,7 +134,7 @@ final class App
 
     public function chat(): ChatService
     {
-        return $this->service(ChatService::class, fn () => new ChatService($this->db(), new ChatRepository($this->db()), $this->rbac(), $this->audit()));
+        return $this->service(ChatService::class, fn () => new ChatService($this->db(), new ChatRepository($this->db()), $this->rbac(), $this->audit(), $this->notifier()));
     }
 
     public function avatars(): AvatarService
@@ -162,7 +162,7 @@ final class App
     /** Réinitialise les services liés à une requête (utile pour enchaîner des requêtes en test). */
     public function resetRequestState(): void
     {
-        unset($this->services[Session::class], $this->services[AuthService::class], $this->services[Rbac::class], $this->services[PresenceService::class]);
+        unset($this->services[Session::class], $this->services[AuthService::class], $this->services[Rbac::class], $this->services[PresenceService::class], $this->services[ChatService::class]);
     }
 
     public function handle(Request $request, Router $router): Response

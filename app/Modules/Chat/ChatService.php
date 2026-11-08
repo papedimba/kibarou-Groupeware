@@ -7,6 +7,7 @@ namespace App\Modules\Chat;
 use App\Core\Database;
 use App\Core\HttpException;
 use App\Core\ValidationException;
+use App\Modules\Notifications\Notifier;
 use App\Services\AuditLogger;
 use App\Services\Rbac;
 use PDOException;
@@ -26,6 +27,7 @@ final class ChatService
         private readonly ChatRepository $repo,
         private readonly Rbac $rbac,
         private readonly AuditLogger $audit,
+        private readonly Notifier $notifier,
     ) {
     }
 
@@ -88,11 +90,53 @@ final class ChatService
         if ($recent >= self::MAX_PER_MINUTE) {
             throw new HttpException(429, 'Trop de messages en peu de temps. Patientez une minute.');
         }
-        return $this->db->transaction(function () use ($me, $conversationId, $body) {
+        $result = $this->db->transaction(function () use ($me, $conversationId, $body) {
             $messageId = $this->db->insert('messages', ['conversation_id' => $conversationId, 'sender_id' => $me, 'body' => $body, 'created_at' => now_utc()]);
             $eventId = $this->event($conversationId, 'message', $me, null, $messageId);
             return ['event_id' => $eventId, 'message_id' => $messageId];
         });
+        $this->notifyMembers($actor, $membership);
+        return $result;
+    }
+
+    /** Marque lu jusqu'à $eventId (jamais à la baisse) et lit les notifications de cette conversation. @param array<string,mixed> $actor */
+    public function markRead(array $actor, int $cid, int $eventId): void
+    {
+        $me = (int) $actor['id'];
+        $this->requireMember($me, $cid);
+        $max = (int) $this->db->value('SELECT COALESCE(MAX(id), 0) FROM chat_events WHERE conversation_id = ?', [$cid]);
+        $this->db->run(
+            'UPDATE conversation_members SET last_read_event_id = GREATEST(last_read_event_id, ?), last_read_at = UTC_TIMESTAMP()
+             WHERE conversation_id = ? AND user_id = ?',
+            [min($eventId, $max), $cid, $me],
+        );
+        $this->db->run(
+            "UPDATE notifications SET read_at = UTC_TIMESTAMP() WHERE user_id = ? AND type = 'chat.message' AND url = ? AND read_at IS NULL",
+            [$me, '/chat/' . $cid],
+        );
+    }
+
+    /**
+     * Une notification par conversation tant qu'elle n'est pas lue ; aucune si la conversation vient d'être lue.
+     * Jamais d'extrait du message (écran verrouillé, boîte mail partagée).
+     * @param array<string,mixed> $actor @param array<string,mixed> $membership
+     */
+    private function notifyMembers(array $actor, array $membership): void
+    {
+        $cid = (int) $membership['conversation_id'];
+        $url = '/chat/' . $cid;
+        $title = 'Nouveau message de ' . $actor['first_name'] . ' ' . $actor['last_name']
+            . ($membership['type'] === 'group' ? ' dans ' . $membership['name'] : '');
+        $recipients = $this->db->fetchAll(
+            "SELECT cm.user_id FROM conversation_members cm
+             WHERE cm.conversation_id = ? AND cm.user_id <> ? AND cm.left_at IS NULL
+               AND (cm.last_read_at IS NULL OR cm.last_read_at < UTC_TIMESTAMP() - INTERVAL 2 MINUTE)
+               AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.user_id = cm.user_id AND n.type = 'chat.message' AND n.url = ? AND n.read_at IS NULL)",
+            [$cid, $actor['id'], $url],
+        );
+        foreach ($recipients as $r) {
+            $this->notifier->notify((int) $r['user_id'], 'chat.message', $title, $url, null, (int) $actor['id']);
+        }
     }
 
     /**

@@ -15,6 +15,7 @@ final class NotificationTypes
         'security.password_changed' => ['label' => 'Mot de passe modifié', 'email' => 'immediate', 'browser' => false, 'mandatory' => true],
         'account.enabled' => ['label' => 'Compte réactivé', 'email' => 'immediate', 'browser' => false, 'mandatory' => false],
         'presence.changed' => ['label' => 'Statut modifié par un responsable', 'email' => 'digest', 'browser' => true, 'mandatory' => false],
+        'chat.message' => ['label' => 'Nouveau message', 'email' => 'digest', 'browser' => true, 'mandatory' => false],
     ];
 
     /** @return array<string,array{label:string,email:string,browser:bool,mandatory:bool}> */

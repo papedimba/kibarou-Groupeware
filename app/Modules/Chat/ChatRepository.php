@@ -63,6 +63,41 @@ final class ChatRepository
         return array_reverse($rows);
     }
 
+    /** Messages d'autrui non lus, postérieurs à mon arrivée. */
+    private const UNREAD = "(SELECT COUNT(*) FROM chat_events ue WHERE ue.conversation_id = cm.conversation_id AND ue.type = 'message'
+        AND ue.id > cm.last_read_event_id AND ue.id > cm.joined_event_id AND (ue.actor_id IS NULL OR ue.actor_id <> cm.user_id))";
+
+    /**
+     * Mes conversations actives, la plus récemment active d'abord.
+     * @return list<array<string,mixed>>
+     */
+    public function conversationsFor(int $userId): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT c.id, c.type, c.name, c.last_event_at, " . self::UNREAD . " AS unread,
+                    (SELECT LEFT(m.body, 80) FROM chat_events le JOIN messages m ON m.id = le.message_id
+                     WHERE le.conversation_id = c.id AND le.type = 'message' AND le.id > cm.joined_event_id ORDER BY le.id DESC LIMIT 1) AS last_body,
+                    o.id AS other_id, o.first_name AS other_first_name, o.last_name AS other_last_name, o.avatar_path AS other_avatar_path
+             FROM conversation_members cm
+             JOIN conversations c ON c.id = cm.conversation_id
+             LEFT JOIN conversation_members om ON c.type = 'direct' AND om.conversation_id = c.id AND om.user_id <> cm.user_id
+             LEFT JOIN users o ON o.id = om.user_id
+             WHERE cm.user_id = ? AND cm.left_at IS NULL
+             ORDER BY c.last_event_at DESC, c.id DESC",
+            [$userId],
+        );
+        return array_map(static function ($r) {
+            $r['unread'] = (int) $r['unread'];
+            $r['title'] = $r['type'] === 'group' ? (string) $r['name'] : trim($r['other_first_name'] . ' ' . $r['other_last_name']);
+            return $r;
+        }, $rows);
+    }
+
+    public function unreadTotal(int $userId): int
+    {
+        return (int) $this->db->value('SELECT COALESCE(SUM(' . self::UNREAD . '), 0) FROM conversation_members cm WHERE cm.user_id = ? AND cm.left_at IS NULL', [$userId]);
+    }
+
     /** @return list<array<string,mixed>> membres actifs */
     public function members(int $conversationId): array
     {
