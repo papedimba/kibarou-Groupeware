@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Chat;
 
+use App\Core\ValidationException;
+
 use App\Core\Database;
 
 /** Lecture de la messagerie, toujours filtrée sur l'appartenance active et la période d'appartenance. */
@@ -228,6 +230,74 @@ final class ChatRepository
             unset($slot);
         }
         return array_map('array_values', $out);
+    }
+
+    /**
+     * Recherche dans mes messages : texte et noms de pièces jointes, conversations où je suis membre actif,
+     * messages postérieurs à mon arrivée (tout l'historique dans un salon), jamais les messages supprimés.
+     * @return list<array<string,mixed>> les 50 plus récents
+     */
+    public function search(int $userId, string $q, int $limit = 50): array
+    {
+        $q = trim($q);
+        if (mb_strlen($q) < 2) {
+            throw new ValidationException(['q' => 'Tapez au moins 2 caractères.']);
+        }
+        $q = mb_substr($q, 0, 100);
+        // %, _ et \ cherchés littéralement (\ est le caractère d'échappement par défaut de LIKE).
+        $like = '%' . addcslashes($q, '%_\\') . '%';
+        $rows = $this->db->fetchAll(
+            "SELECT m.id AS message_id, m.conversation_id, m.body, m.created_at, CONCAT(u.first_name, ' ', u.last_name) AS sender_name,
+                    (SELECT a.original_name FROM chat_attachments a WHERE a.message_id = m.id AND a.original_name LIKE ? ORDER BY a.id LIMIT 1) AS file_name
+             FROM messages m
+             JOIN chat_events e ON e.message_id = m.id AND e.type = 'message'
+             JOIN conversation_members cm ON cm.conversation_id = m.conversation_id AND cm.user_id = ? AND cm.left_at IS NULL AND e.id > cm.joined_event_id
+             LEFT JOIN users u ON u.id = m.sender_id
+             WHERE m.deleted_at IS NULL
+               AND (m.body LIKE ? OR EXISTS (SELECT 1 FROM chat_attachments a2 WHERE a2.message_id = m.id AND a2.original_name LIKE ?))
+             ORDER BY m.id DESC LIMIT " . max(1, min(50, $limit)),
+            [$like, $userId, $like, $like],
+        );
+        $titles = array_column($this->conversationsFor($userId), 'title', 'id');
+        return array_map(static function ($r) use ($q, $titles) {
+            $inText = mb_stripos((string) $r['body'], $q) !== false || $r['file_name'] === null;
+            $source = $inText ? (string) $r['body'] : 'Fichier : ' . $r['file_name'];
+            return ['message_id' => (int) $r['message_id'], 'conversation_id' => (int) $r['conversation_id'],
+                'conversation_title' => (string) ($titles[(int) $r['conversation_id']] ?? ''), 'sender_name' => (string) $r['sender_name'],
+                'created_at' => (string) $r['created_at'], 'matched' => $inText ? 'text' : 'file', 'excerpt_html' => self::highlight($source, $q)];
+        }, $rows);
+    }
+
+    /** Extrait d'environ 120 caractères autour du terme : échappé d'abord, puis termes entourés de <mark>. */
+    private static function highlight(string $text, string $q): string
+    {
+        $text = trim((string) preg_replace('/\s+/u', ' ', $text));
+        $pos = mb_stripos($text, $q);
+        $start = $pos === false ? 0 : max(0, $pos - 50);
+        $excerpt = ($start > 0 ? '…' : '') . mb_substr($text, $start, 120) . (mb_strlen($text) > $start + 120 ? '…' : '');
+        return (string) preg_replace('/' . preg_quote(e($q), '/') . '/iu', '<mark>$0</mark>', e($excerpt));
+    }
+
+    /**
+     * Historique centré sur un message (25 évènements avant, le message, 25 après), mêmes règles que history().
+     * @return array{events:list<array<string,mixed>>, has_more_after:bool}|null null si le message n'est pas visible
+     */
+    public function around(int $userId, int $cid, int $messageId): ?array
+    {
+        $target = $this->visibleMessage($userId, $messageId, $cid);
+        if ($target === null) {
+            return null;
+        }
+        $eventId = (int) $target['event_id'];
+        $after = $this->db->fetchAll(
+            'SELECT ' . self::EVENT_COLUMNS . ' FROM chat_events e
+             JOIN conversation_members cm ON cm.conversation_id = e.conversation_id AND cm.user_id = ? AND cm.left_at IS NULL
+             ' . self::EVENT_JOINS . "
+             WHERE e.conversation_id = ? AND e.id > cm.joined_event_id AND e.type NOT IN ('created', " . self::ACTIONS . ') AND e.id > ?
+             ORDER BY e.id LIMIT 26',
+            [$userId, $cid, $eventId],
+        );
+        return ['events' => [...$this->history($userId, $cid, $eventId + 1, 26), ...array_slice($after, 0, 25)], 'has_more_after' => count($after) > 25];
     }
 
     /**

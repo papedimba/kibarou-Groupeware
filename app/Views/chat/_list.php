@@ -9,6 +9,10 @@ $currentId = $conversation !== null ? (int) $conversation['id'] : 0;
         <a class="btn btn-primary btn-sm kb-chat-new" href="<?= e(url('/chat/new')) ?>"><i data-lucide="square-pen" aria-hidden="true"></i> Nouvelle conversation</a>
     </div>
 </div>
+<form class="kb-chat-search" method="get" action="<?= e(url('/chat/search')) ?>" role="search">
+    <label class="visually-hidden" for="chat-search">Rechercher dans mes messages</label>
+    <input class="form-control" type="search" id="chat-search" name="q" placeholder="Rechercher dans mes messages" minlength="2" maxlength="100" value="<?= e($q ?? '') ?>">
+</form>
 <?php if ($conversations === []): ?>
     <p class="kb-chat-empty">Aucune conversation pour l'instant.<br>Écrivez à un collègue depuis l'annuaire ou créez un groupe.</p>
 <?php endif; ?>

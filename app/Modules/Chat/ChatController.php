@@ -20,7 +20,22 @@ final class ChatController extends Controller
 
     public function show(Request $request): Response
     {
-        return $this->page($this->id($request));
+        $around = $request->int('around');
+        return $this->page($this->id($request), $around > 0 ? $around : null);
+    }
+
+    /** Recherche dans mes messages (page complète, fonctionne sans JavaScript). */
+    public function search(Request $request): Response
+    {
+        $q = $request->str('q');
+        $results = [];
+        $error = null;
+        try {
+            $results = (new ChatRepository($this->app->db()))->search((int) $this->user()['id'], $q);
+        } catch (ValidationException $e) {
+            $error = (string) ($e->errors['q'] ?? '');
+        }
+        return $this->view('chat/search', ['currentPath' => '/chat', 'q' => $q, 'results' => $results, 'error' => $error]);
     }
 
     public function newForm(Request $request): Response
@@ -239,15 +254,19 @@ final class ChatController extends Controller
         return $this->redirect('/chat/' . $cid, $done);
     }
 
-    private function page(?int $cid): Response
+    private function page(?int $cid, ?int $around = null): Response
     {
         $me = (int) $this->user()['id'];
         $repo = new ChatRepository($this->app->db());
-        $data = ['currentPath' => '/chat', 'conversations' => $repo->conversationsFor($me, $cid ?? 0), 'conversation' => null,
+        $data = ['currentPath' => '/chat', 'conversations' => $repo->conversationsFor($me, $cid ?? 0), 'conversation' => null, 'target' => 0, 'hasMoreAfter' => false,
             'poll' => (array) $this->app->config('chat.poll'), 'since' => (int) $this->app->db()->value('SELECT COALESCE(MAX(id), 0) FROM chat_events')];
         if ($cid !== null) {
             $membership = $this->app->chat()->requireMember($me, $cid);
-            $events = $repo->hydrate($me, $repo->history($me, $cid, null));
+            // Ouverture depuis la recherche : historique centré sur le message trouvé.
+            $centered = $around !== null ? $repo->around($me, $cid, $around) : null;
+            $events = $repo->hydrate($me, $centered['events'] ?? $repo->history($me, $cid, null));
+            $data['target'] = $centered !== null ? $around : 0;
+            $data['hasMoreAfter'] = (bool) ($centered['has_more_after'] ?? false);
             if ($events !== []) {
                 $this->app->chat()->markRead($this->user(), $cid, (int) end($events)['id']);
             }

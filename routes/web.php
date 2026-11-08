@@ -66,6 +66,7 @@ return static function (Router $r): void {
             $r->get('/chat/new', [ChatController::class, 'newForm']);
             $r->post('/chat/new', [ChatController::class, 'create']);
             $r->get('/chat/with/{userId}', [ChatController::class, 'with']);
+            $r->get('/chat/search', [ChatController::class, 'search']);
             $r->get('/chat/channels', [ChannelController::class, 'index']);
             $r->get('/chat/channels/new', [ChannelController::class, 'newForm']);
             $r->post('/chat/channels', [ChannelController::class, 'create']);

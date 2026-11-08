@@ -302,6 +302,8 @@
     function appendEvent(ev, fromPoll) {
         if (!box || box.querySelector('[data-event-id="' + ev.id + '"]')) { return; }
         if (ev.type === 'message_edited' || ev.type === 'message_deleted' || ev.type === 'reaction') { updateMessage(ev); return; }
+        // Vue centrée sur un résultat de recherche : la fin n'est pas chargée, on n'ajoute rien en bas.
+        if (conv.hasAttribute('data-around')) { return; }
         var stick = nearBottom() || !fromPoll;
         var empty = box.querySelector('[data-chat-empty]');
         if (empty) { empty.remove(); }
@@ -749,6 +751,7 @@
         box.querySelectorAll('[data-msg-actions]').forEach(function (b) { b.hidden = false; });
     }
 
-    if (box) { scrollBottom(); }
+    var targetMsg = box && box.querySelector('.kb-msg.is-target');
+    if (targetMsg) { targetMsg.scrollIntoView({ block: 'center' }); } else if (box) { scrollBottom(); }
     schedule();
 }());

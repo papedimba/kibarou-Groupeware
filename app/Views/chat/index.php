@@ -30,7 +30,7 @@ $me = (int) $currentUser['id'];
         $addable = array_values(array_filter($people, static fn ($p) => !in_array((int) $p['id'], $memberIds, true)));
     ?>
         <section class="kb-chat-conversation" aria-labelledby="chat-title"
-                 data-chat-conversation="<?= $cid ?>" data-type="<?= e($type) ?>" data-me="<?= $me ?>" data-group="<?= $isGroup ? '1' : '0' ?>" data-has-more="<?= count($events) >= 50 ? '1' : '0' ?>" data-last-event="<?= (int) $lastEventId ?>">
+                 data-chat-conversation="<?= $cid ?>" data-type="<?= e($type) ?>" data-me="<?= $me ?>" data-group="<?= $isGroup ? '1' : '0' ?>" data-has-more="<?= count($events) >= 50 || $target ? '1' : '0' ?>"<?= $hasMoreAfter ? ' data-around="1"' : '' ?> data-last-event="<?= (int) $lastEventId ?>">
             <header class="kb-chat-head">
                 <a class="btn btn-light kb-chat-back" href="<?= e(url('/chat')) ?>" aria-label="Retour aux conversations"><i data-lucide="arrow-left" aria-hidden="true"></i></a>
                 <?php if ($isGroup): ?>
@@ -124,9 +124,15 @@ $me = (int) $currentUser['id'];
                     <?php $d = day_label((string) $ev['created_at']); if ($d !== $day): $day = $d; ?>
                         <li class="kb-msg-day" data-day="<?= e($d) ?>"><span><?= e($d) ?></span></li>
                     <?php endif; ?>
-                    <?= $this->partial('chat/_message', ['ev' => $ev, 'me' => $me, 'isGroup' => $isGroup, 'convType' => $type, 'seen' => ($seen['event_id'] ?? 0) === (int) $ev['id'] ? $seen : null]) ?>
+                    <?= $this->partial('chat/_message', ['ev' => $ev, 'me' => $me, 'isGroup' => $isGroup, 'convType' => $type, 'seen' => ($seen['event_id'] ?? 0) === (int) $ev['id'] ? $seen : null, 'target' => $target]) ?>
                 <?php endforeach; ?>
             </ol>
+            <?php if ($hasMoreAfter): $lastShown = (int) (array_values(array_filter($events, static fn ($e) => $e['type'] === 'message'))[count(array_filter($events, static fn ($e) => $e['type'] === 'message')) - 1]['message_id'] ?? 0); ?>
+                <div class="kb-chat-more-after">
+                    <a class="btn btn-light btn-sm" href="<?= e(url("/chat/$cid?around=$lastShown#m$lastShown")) ?>">Afficher les messages suivants</a>
+                    <a class="btn btn-link btn-sm" href="<?= e(url("/chat/$cid")) ?>">Aller aux derniers messages</a>
+                </div>
+            <?php endif; ?>
 
             <?php if ($archived): ?>
                 <p class="kb-chat-compose kb-chat-compose-closed">Ce salon est archivé : il n'accepte plus de messages.</p>

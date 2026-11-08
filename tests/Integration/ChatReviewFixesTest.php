@@ -92,6 +92,6 @@ final class ChatReviewFixesTest extends IntegrationTestCase
         $g = $this->app->chat()->createGroup($this->u($a), 'Groupe', [$b, $c]);
         $this->login('a@kibarou.test', 'Motdepasse123');
         $this->assertStringContainsString('maxlength="80"', $this->get('/chat/new')->body);
-        $this->assertStringNotContainsString('maxlength="100"', $this->get("/chat/$g")->body);
+        $this->assertDoesNotMatchRegularExpression('/name="name"[^>]*maxlength="100"/', $this->get("/chat/$g")->body);
     }
 }

@@ -14,7 +14,7 @@ if ($ev['type'] !== 'message'):
     $files = array_values(array_filter($ev['attachments'] ?? [], static fn ($a) => $a['kind'] === 'file'));
     $reply = $ev['reply_to'] ?? null;
 ?>
-    <li class="kb-msg<?= $mine ? ' is-mine' : '' ?>" id="m<?= $mid ?>" data-event-id="<?= $id ?>" data-message-id="<?= $mid ?>" data-mine="<?= $mine ? '1' : '0' ?>"<?= $mine && !empty($ev['client_id']) ? ' data-client-id="' . e($ev['client_id']) . '"' : '' ?>
+    <li class="kb-msg<?= $mine ? ' is-mine' : '' ?><?= ($target ?? 0) === $mid ? ' is-target' : '' ?>" id="m<?= $mid ?>" data-event-id="<?= $id ?>" data-message-id="<?= $mid ?>" data-mine="<?= $mine ? '1' : '0' ?>"<?= $mine && !empty($ev['client_id']) ? ' data-client-id="' . e($ev['client_id']) . '"' : '' ?>
         data-created="<?= e(str_replace(' ', 'T', (string) $ev['created_at'])) ?>Z" data-deleted="<?= $deleted ? '1' : '0' ?>">
         <?php if ($isGroup && !$mine): ?><span class="kb-msg-author"><?= e($sender) ?></span><?php endif; ?>
         <div class="kb-msg-bubble">
