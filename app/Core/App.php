@@ -6,6 +6,8 @@ namespace App\Core;
 
 use App\Modules\Auth\AuthService;
 use App\Modules\Auth\PasswordResetService;
+use App\Modules\Directory\DirectoryRepository;
+use App\Modules\Directory\PresenceService;
 use App\Services\AuditLogger;
 use App\Services\MailQueue;
 use App\Services\Rbac;
@@ -124,10 +126,21 @@ final class App
         ));
     }
 
+    public function presence(): PresenceService
+    {
+        return $this->service(PresenceService::class, fn () => new PresenceService(
+            $this->db(),
+            new DirectoryRepository($this->db()),
+            $this->rbac(),
+            $this->audit(),
+            (string) $this->config['app']['timezone'],
+        ));
+    }
+
     /** Réinitialise les services liés à une requête (utile pour enchaîner des requêtes en test). */
     public function resetRequestState(): void
     {
-        unset($this->services[Session::class], $this->services[AuthService::class], $this->services[Rbac::class]);
+        unset($this->services[Session::class], $this->services[AuthService::class], $this->services[Rbac::class], $this->services[PresenceService::class]);
     }
 
     public function handle(Request $request, Router $router): Response

@@ -13,8 +13,12 @@ final class Maintenance
      * @param array{login_attempts_days:int,audit_logs_days:int,mail_queue_days:int} $retention
      * @param array{idle_minutes:int,absolute_hours:int} $session
      */
-    public function __construct(private readonly Database $db, private readonly array $retention, private readonly array $session)
-    {
+    public function __construct(
+        private readonly Database $db,
+        private readonly array $retention,
+        private readonly array $session,
+        private readonly string $today,
+    ) {
     }
 
     /** @return array<string,int> lignes supprimées par catégorie */
@@ -29,6 +33,11 @@ final class Maintenance
             'login_attempts' => $this->delete('DELETE FROM login_attempts WHERE created_at < UTC_TIMESTAMP() - INTERVAL ? DAY', [$r['login_attempts_days']]),
             'password_resets' => $this->delete('DELETE FROM password_resets WHERE expires_at < UTC_TIMESTAMP() - INTERVAL 1 DAY OR used_at < UTC_TIMESTAMP() - INTERVAL 1 DAY', []),
             'mail_queue' => $this->delete("DELETE FROM mail_queue WHERE status IN ('sent','failed') AND created_at < UTC_TIMESTAMP() - INTERVAL ? DAY", [$r['mail_queue_days']]),
+            'presence' => $this->delete(
+                "DELETE FROM user_presence WHERE COALESCE(until_date, start_date) < ?
+                 OR user_id IN (SELECT id FROM users WHERE status = 'disabled' OR deleted_at IS NOT NULL)",
+                [$this->today],
+            ),
             'audit_logs' => $this->delete('DELETE FROM audit_logs WHERE created_at < UTC_TIMESTAMP() - INTERVAL ? DAY', [$r['audit_logs_days']]),
         ];
     }

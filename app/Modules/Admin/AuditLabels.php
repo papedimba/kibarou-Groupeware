@@ -32,11 +32,12 @@ final class AuditLabels
         'department.updated' => 'Service modifié',
         'position.created' => 'Fonction créée',
         'position.updated' => 'Fonction modifiée',
+        'presence.updated' => 'Statut modifié',
     ];
 
     private const ALERTS = ['auth.login_failed', 'auth.login_disabled', 'auth.throttled', 'user.disabled', 'user.sessions_revoked'];
 
-    private const DETAIL_KEYS = ['email' => 'Email', 'count' => 'Nombre', 'changes' => 'Champs modifiés', 'name' => 'Nom'];
+    private const DETAIL_KEYS = ['email' => 'Email', 'count' => 'Nombre', 'changes' => 'Champs modifiés', 'name' => 'Nom', 'status' => 'Statut'];
 
     private const FIELDS = ['email' => 'Email', 'first_name' => 'Prénom', 'last_name' => 'Nom', 'phone' => 'Téléphone professionnel', 'phone_personal' => 'Téléphone personnel',
         'department_id' => 'Service', 'position_id' => 'Fonction', 'manager_id' => 'Responsable'];

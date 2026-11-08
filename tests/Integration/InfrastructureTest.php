@@ -45,7 +45,7 @@ final class InfrastructureTest extends IntegrationTestCase
         $db->insert('login_attempts', ['email' => 'x', 'ip_address' => '1.1.1.1', 'success' => 0, 'created_at' => gmdate('Y-m-d H:i:s', strtotime('-200 days'))]);
         $db->insert('login_attempts', ['email' => 'y', 'ip_address' => '1.1.1.1', 'success' => 0, 'created_at' => now_utc()]);
         $db->insert('sessions', ['id' => str_repeat('f', 64), 'ip_address' => '1.1.1.1', 'data' => '{}', 'created_at' => now_utc(), 'last_activity_at' => gmdate('Y-m-d H:i:s', strtotime('-1 day'))]);
-        $result = (new Maintenance($db, $this->app->config('retention'), $this->app->config('session')))->run();
+        $result = (new Maintenance($db, $this->app->config('retention'), $this->app->config('session'), $this->app->presence()->today()))->run();
         $this->assertSame(1, $result['login_attempts']);
         $this->assertGreaterThanOrEqual(1, $result['sessions']);
         $this->assertSame(1, (int) $db->value('SELECT COUNT(*) FROM login_attempts'));
@@ -76,5 +76,21 @@ final class InfrastructureTest extends IntegrationTestCase
         $this->assertSame(404, $this->get('/install', ['token' => $token])->status, 'Installateur désactivé après création');
         $this->assertRedirect($this->login('pape@kibarou.test', 'Installation2026'), '/');
         $this->assertSame(200, $this->get('/admin/roles')->status);
+    }
+
+    public function testMaintenancePurgesExpiredPresence(): void
+    {
+        $db = $this->app->db();
+        $tz = new \DateTimeZone((string) $this->app->config('app.timezone'));
+        $day = static fn (string $m) => (new \DateTimeImmutable($m, $tz))->format('Y-m-d');
+        $expired = $this->createUser('expire@kibarou.test');
+        $valid = $this->createUser('valide@kibarou.test');
+        $disabled = $this->createUser('parti@kibarou.test', ['collaborateur'], 'Motdepasse123', ['status' => 'disabled']);
+        foreach ([[$expired, $day('-1 day'), null], [$valid, $day('-2 days'), $day('+3 days')], [$disabled, $day('today'), null]] as [$u, $start, $until]) {
+            $db->run("INSERT INTO user_presence (user_id, status, start_date, until_date, updated_at) VALUES (?, 'office', ?, ?, UTC_TIMESTAMP())", [$u, $start, $until]);
+        }
+        $result = (new Maintenance($db, $this->app->config('retention'), $this->app->config('session'), $day('today')))->run();
+        $this->assertSame(2, $result['presence']);
+        $this->assertSame([$valid], array_map('intval', array_column($db->fetchAll('SELECT user_id FROM user_presence'), 'user_id')));
     }
 }

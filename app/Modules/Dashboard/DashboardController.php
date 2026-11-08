@@ -35,6 +35,7 @@ final class DashboardController extends Controller
             'me' => $me,
             'alerts' => $alerts,
             'contacts' => (new UserRepository($db))->adminContacts(),
+            'myStatus' => can('directory.view') ? ($this->app->presence()->current([(int) $user['id']])[(int) $user['id']] ?? null) : null,
         ]);
     }
 }

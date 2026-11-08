@@ -72,7 +72,7 @@ try {
                 (int) $app->config('mail.batch_size'),
                 (int) $app->config('mail.max_attempts'),
             );
-            $cleaned = (new Maintenance($app->db(), (array) $app->config('retention'), (array) $app->config('session')))->run();
+            $cleaned = (new Maintenance($app->db(), (array) $app->config('retention'), (array) $app->config('session'), $app->presence()->today()))->run();
             $app->db()->run(
                 "INSERT INTO settings (`key`, `value`, updated_at) VALUES ('cron_last_run', ?, UTC_TIMESTAMP())
                  ON DUPLICATE KEY UPDATE `value` = VALUES(`value`), updated_at = VALUES(updated_at)",

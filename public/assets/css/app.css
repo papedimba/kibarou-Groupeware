@@ -182,3 +182,14 @@ body { background: var(--kb-gray-50); font-size: .9375rem; accent-color: var(--k
     .kb-show-sm { display: inline; }
 }
 .kb-avatar-lg { width: 64px; height: 64px; font-size: 1.25rem; }
+
+/* Présence */
+.kb-presence { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-top: .2rem; font-size: .875rem; }
+.kb-online { width: .7rem; height: .7rem; border-radius: 50%; background: #15803d; box-shadow: 0 0 0 2px #fff; flex-shrink: 0; }
+.kb-status { font-weight: 600; color: var(--kb-night); }
+.kb-status-none { font-weight: 400; color: var(--kb-gray-500); }
+.kb-status-leave, .kb-status-absent { color: #a33a06; }
+.kb-status-extra { color: var(--kb-gray-500); }
+.kb-status-choices { display: flex; flex-wrap: wrap; gap: .5rem; }
+.kb-status-choices .btn { min-height: 44px; }
+[data-presence-details][hidden], [data-presence-site][hidden] { display: none !important; }

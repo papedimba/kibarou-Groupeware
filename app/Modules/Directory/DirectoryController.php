@@ -16,9 +16,12 @@ final class DirectoryController extends Controller
     {
         $q = mb_substr($request->str('q'), 0, 100);
         $departmentId = $request->int('department_id');
+        $members = $this->repo()->members($q, $departmentId);
         return $this->view('directory/index', [
             'currentPath' => '/directory',
-            'members' => $this->repo()->members($q, $departmentId),
+            'members' => $members,
+            'statuses' => $this->app->presence()->current(array_map(static fn ($m) => (int) $m['id'], $members)),
+            'online' => $this->app->presence()->onlineIds(),
             'q' => $q,
             'departmentId' => $departmentId,
             'departments' => (new OrganizationService($this->app->db(), $this->app->audit()))->departmentOptions(),
@@ -32,6 +35,9 @@ final class DirectoryController extends Controller
             'currentPath' => '/directory',
             'person' => $person,
             'showPersonal' => $this->canSeePersonalPhone($this->user(), $person),
+            'status' => $this->app->presence()->current([(int) $person['id']])[(int) $person['id']] ?? null,
+            'online' => isset($this->app->presence()->onlineIds()[(int) $person['id']]),
+            'canEditStatus' => $this->app->presence()->canEdit($this->user(), (int) $person['id']),
             'chatEnabled' => (int) $this->app->db()->value("SELECT is_enabled FROM modules WHERE slug = 'chat'") === 1,
         ]);
     }

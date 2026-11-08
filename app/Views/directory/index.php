@@ -1,5 +1,5 @@
 <?php
-/** @var list<array<string,mixed>> $members @var string $q @var int $departmentId @var list<array<string,mixed>> $departments */
+/** @var list<array<string,mixed>> $members @var array<int,array<string,mixed>> $statuses @var array<int,true> $online @var string $q @var int $departmentId @var list<array<string,mixed>> $departments */
 $this->layout('layouts/app', ['title' => 'Annuaire', 'breadcrumbs' => [['Annuaire', null]]]);
 ?>
 <div class="kb-page-title">
@@ -27,13 +27,15 @@ $this->layout('layouts/app', ['title' => 'Annuaire', 'breadcrumbs' => [['Annuair
     <?php foreach ($members as $m): ?>
         <?php
         $name = $m['first_name'] . ' ' . $m['last_name'];
-        $search = mb_strtolower(implode(' ', [$name, $m['last_name'] . ' ' . $m['first_name'], $m['position_title'], $m['department_name'], $m['site_label'] ?? '']));
+        $st = $statuses[(int) $m['id']] ?? null;
+        $search = mb_strtolower(implode(' ', [$name, $m['last_name'] . ' ' . $m['first_name'], $m['position_title'], $m['department_name'], $st['site_label'] ?? '']));
         ?>
         <li class="kb-person" data-search="<?= e($search) ?>">
             <span class="kb-avatar" aria-hidden="true"><?= e(initials((string) $m['first_name'], (string) $m['last_name'])) ?></span>
             <div class="kb-person-main">
                 <a class="kb-person-name" href="<?= e(url('/directory/' . (int) $m['id'])) ?>"><?= e($name) ?></a>
                 <span class="kb-person-meta"><?= e(implode(' · ', array_filter([$m['position_title'], $m['department_name']])) ?: 'Fonction non renseignée') ?></span>
+                <?= $this->partial('partials/presence_badge', ['status' => $st, 'online' => isset($online[(int) $m['id']])]) ?>
             </div>
             <div class="kb-person-actions">
                 <?php if (!empty($m['phone'])): ?>

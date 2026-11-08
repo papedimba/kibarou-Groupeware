@@ -1,7 +1,8 @@
 <?php
 /**
  * @var array<string,mixed> $currentUser @var array<string,mixed> $me
- * @var array<string,mixed>|null $alerts @var list<array<string,mixed>> $contacts
+ * @var array<string,mixed>|null $alerts @var list<array<string,mixed>> $contacts @var array<string,mixed>|null $myStatus
+ * @var array<string,string> $errors @var array<string,mixed> $old
  */
 $this->layout('layouts/app', ['title' => 'Accueil']);
 $value = static fn (?string $v): string => $v !== null && $v !== '' ? e($v) : '<span class="text-secondary">Non renseigné</span>';
@@ -9,6 +10,15 @@ $value = static fn (?string $v): string => $v !== null && $v !== '' ? e($v) : '<
 <div class="kb-page-title">
     <h1>Bonjour <?= e($currentUser['first_name']) ?></h1>
 </div>
+
+<?php if (can('directory.view')): ?>
+    <section class="card mb-4" aria-labelledby="today-title">
+        <h2 class="card-header h6 m-0" id="today-title">Où êtes-vous aujourd'hui ?</h2>
+        <div class="card-body">
+            <?= $this->partial('partials/presence_form', ['targetId' => null, 'status' => $myStatus, 'returnTo' => '/', 'errors' => $errors, 'old' => $old, 'idPrefix' => 'home']) ?>
+        </div>
+    </section>
+<?php endif; ?>
 
 <div class="row g-4">
     <div class="col-lg-7">

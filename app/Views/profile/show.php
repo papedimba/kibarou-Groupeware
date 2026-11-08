@@ -1,5 +1,5 @@
 <?php
-/** @var array<string,mixed> $currentUser @var list<array<string,mixed>> $sessions @var string|null $currentSessionId @var array<string,string> $errors @var array<string,mixed> $old */
+/** @var array<string,mixed>|null $myStatus @var array<string,mixed> $currentUser @var list<array<string,mixed>> $sessions @var string|null $currentSessionId @var array<string,string> $errors @var array<string,mixed> $old */
 $this->layout('layouts/app', ['title' => 'Mon profil', 'breadcrumbs' => [['Mon profil', null]]]);
 ?>
 <div class="kb-page-title">
@@ -35,6 +35,12 @@ $this->layout('layouts/app', ['title' => 'Mon profil', 'breadcrumbs' => [['Mon p
                 </form>
             </div>
         </div>
+        <section class="card mt-4" aria-labelledby="my-status-title">
+            <h2 class="card-header h6 m-0" id="my-status-title">Mon statut du jour</h2>
+            <div class="card-body">
+                <?= $this->partial('partials/presence_form', ['targetId' => null, 'status' => $myStatus, 'returnTo' => '/profile', 'errors' => $errors, 'old' => $old, 'idPrefix' => 'profil']) ?>
+            </div>
+        </section>
     </div>
     <div class="col-lg-7">
         <div class="card">

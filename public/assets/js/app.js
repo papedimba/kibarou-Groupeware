@@ -131,6 +131,18 @@
         });
     });
 
+    // Formulaire de statut : chantier pour « Sur chantier », détails pour chantier / déplacement / congé.
+    document.querySelectorAll('[data-presence-form]').forEach(function (form) {
+        var details = form.querySelector('[data-presence-details]'), site = form.querySelector('[data-presence-site]');
+        var sync = function () {
+            var checked = form.querySelector('input[name=status]:checked'), v = checked ? checked.value : '';
+            details.hidden = ['site', 'travel', 'leave'].indexOf(v) === -1;
+            site.hidden = v !== 'site';
+        };
+        form.querySelectorAll('input[name=status]').forEach(function (r) { r.addEventListener('change', sync); });
+        sync();
+    });
+
     // Soumission automatique des filtres : <select data-autosubmit>
     document.querySelectorAll('[data-autosubmit]').forEach(function (el) {
         el.addEventListener('change', function () { el.form.submit(); });

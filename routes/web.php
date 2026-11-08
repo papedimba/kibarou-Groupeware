@@ -7,6 +7,7 @@ use App\Modules\Admin\AdminController;
 use App\Modules\Auth\AuthController;
 use App\Modules\Dashboard\DashboardController;
 use App\Modules\Directory\DirectoryController;
+use App\Modules\Directory\PresenceController;
 use App\Modules\Install\InstallController;
 use App\Modules\Organization\OrganizationController;
 use App\Modules\Roles\RolesController;
@@ -40,6 +41,8 @@ return static function (Router $r): void {
         $r->group(['perm:directory.view'], static function (Router $r) {
             $r->get('/directory', [DirectoryController::class, 'index']);
             $r->get('/directory/{id}', [DirectoryController::class, 'show']);
+            $r->post('/presence', [PresenceController::class, 'update']);
+            $r->post('/presence/clear', [PresenceController::class, 'clear']);
         });
 
         $r->group(['perm:admin.access'], static function (Router $r) {

@@ -20,6 +20,7 @@ final class ProfileController extends Controller
             'currentPath' => '/profile',
             'sessions' => (new UserRepository($this->app->db()))->sessions((int) $user['id']),
             'currentSessionId' => $this->app->session()->id(),
+            'myStatus' => $this->app->presence()->current([(int) $user['id']])[(int) $user['id']] ?? null,
         ]);
     }
 

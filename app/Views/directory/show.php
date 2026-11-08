@@ -1,5 +1,5 @@
 <?php
-/** @var array<string,mixed> $person @var bool $showPersonal @var bool $chatEnabled */
+/** @var array<string,mixed> $person @var bool $showPersonal @var bool $chatEnabled @var array<string,mixed>|null $status @var bool $online @var bool $canEditStatus @var array<string,string> $errors @var array<string,mixed> $old */
 $name = $person['first_name'] . ' ' . $person['last_name'];
 $this->layout('layouts/app', ['title' => $name, 'breadcrumbs' => [['Annuaire', '/directory'], [$name, null]]]);
 $tel = static fn (string $n): string => preg_replace('/[^0-9+]/', '', $n) ?? '';
@@ -38,5 +38,15 @@ $tel = static fn (string $n): string => preg_replace('/[^0-9+]/', '', $n) ?? '';
             </div>
         </section>
     </div>
-    <div class="col-lg-6" id="presence"></div>
+    <div class="col-lg-6">
+        <section class="card" id="presence" aria-labelledby="presence-title">
+            <h2 class="card-header h6 m-0" id="presence-title">Aujourd'hui</h2>
+            <div class="card-body">
+                <p class="mb-3"><?= $this->partial('partials/presence_badge', ['status' => $status, 'online' => $online, 'full' => true]) ?></p>
+                <?php if ($canEditStatus): ?>
+                    <?= $this->partial('partials/presence_form', ['targetId' => (int) $person['id'], 'status' => $status, 'returnTo' => '/directory/' . (int) $person['id'], 'errors' => $errors, 'old' => $old, 'idPrefix' => 'fiche']) ?>
+                <?php endif; ?>
+            </div>
+        </section>
+    </div>
 </div>
