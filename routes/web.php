@@ -6,6 +6,7 @@ use App\Core\Router;
 use App\Modules\Admin\AdminController;
 use App\Modules\Auth\AuthController;
 use App\Modules\Dashboard\DashboardController;
+use App\Modules\Directory\DirectoryController;
 use App\Modules\Install\InstallController;
 use App\Modules\Organization\OrganizationController;
 use App\Modules\Roles\RolesController;
@@ -35,6 +36,10 @@ return static function (Router $r): void {
         $r->get('/profile/password', [ProfileController::class, 'passwordForm']);
         $r->post('/profile/password', [ProfileController::class, 'changePassword']);
         $r->post('/profile/sessions/revoke', [ProfileController::class, 'revokeSession']);
+
+        $r->group(['perm:directory.view'], static function (Router $r) {
+            $r->get('/directory', [DirectoryController::class, 'index']);
+        });
 
         $r->group(['perm:admin.access'], static function (Router $r) {
             $r->get('/admin', [AdminController::class, 'dashboard']);

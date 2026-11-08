@@ -114,6 +114,23 @@
         btn.addEventListener('click', function () { window.print(); });
     });
 
+    // Annuaire : filtre instantané sans rechargement (insensible aux accents et à la casse).
+    var fold = function (t) { return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); };
+    document.querySelectorAll('[data-directory-filter]').forEach(function (input) {
+        var list = document.getElementById(input.getAttribute('data-directory-filter'));
+        var empty = document.getElementById(input.getAttribute('data-directory-filter') + '-empty');
+        if (!list) { return; }
+        input.addEventListener('input', function () {
+            var q = fold(input.value), shown = 0;
+            list.querySelectorAll('[data-search]').forEach(function (item) {
+                var match = q === '' || fold(item.getAttribute('data-search')).indexOf(q) !== -1;
+                item.hidden = !match;
+                if (match) { shown++; }
+            });
+            if (empty) { empty.hidden = shown !== 0; }
+        });
+    });
+
     // Soumission automatique des filtres : <select data-autosubmit>
     document.querySelectorAll('[data-autosubmit]').forEach(function (el) {
         el.addEventListener('change', function () { el.form.submit(); });

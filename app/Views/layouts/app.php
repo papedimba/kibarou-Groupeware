@@ -35,6 +35,7 @@ $nav = static function (string $path, string $icon, string $label) use ($current
         </a>
         <nav class="kb-nav">
             <?= $nav('/', 'house', 'Accueil') ?>
+            <?php if (can('directory.view')): ?><?= $nav('/directory', 'contact', 'Annuaire') ?><?php endif; ?>
             <?= $nav('/profile', 'user', 'Mon profil') ?>
             <?php if (can('admin.access')): ?>
                 <div class="kb-nav-title">Administration</div>

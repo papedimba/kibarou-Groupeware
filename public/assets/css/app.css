@@ -163,3 +163,21 @@ body { background: var(--kb-gray-50); font-size: .9375rem; accent-color: var(--k
 }
 .kb-contacts li { display: flex; flex-wrap: wrap; column-gap: .75rem; padding: .35rem 0; }
 .kb-alert-list li { padding: .2rem 0; }
+
+/* Annuaire */
+.kb-directory { background: #fff; border: 1px solid var(--kb-gray-200); border-radius: 12px; overflow: hidden; }
+.kb-person { display: flex; align-items: center; gap: 1rem; padding: .75rem 1rem; border-bottom: 1px solid var(--kb-gray-200); }
+.kb-person:last-child { border-bottom: 0; }
+.kb-person[hidden] { display: none; }
+.kb-person-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.kb-person-name { font-weight: 600; text-decoration: none; padding: .35rem 0; }
+.kb-person-meta { color: var(--kb-gray-500); font-size: .875rem; }
+.kb-person-actions { display: flex; gap: .5rem; flex-shrink: 0; }
+.kb-show-sm { display: none; }
+@media (max-width: 767.98px) {
+    .kb-person { flex-wrap: wrap; }
+    .kb-person-actions { width: 100%; }
+    .kb-person-actions .btn { flex: 1; }
+    .kb-hide-sm { display: none; }
+    .kb-show-sm { display: inline; }
+}
