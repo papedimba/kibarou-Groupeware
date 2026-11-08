@@ -94,5 +94,6 @@ Ordre justifié : l'annuaire et les notifications sont des dépendances de la me
 - Conception : `docs/superpowers/specs/2026-11-08-messagerie-4a-design.md` ; plan : `docs/superpowers/plans/2026-11-08-lot4a-messagerie.md`.
 - Livré : conversations privées (une par paire) et groupes (ajout, départ, renommage), journal d'évènements, non-lus par conversation et dans le menu, écrans PC (deux colonnes) et téléphone (liste puis conversation plein écran), envoi sans rechargement avec reprise après échec réseau, brouillons, envoi sans JavaScript, notifications sans contenu, limite de débit, session non prolongée par l'interrogation.
 - Correctif au passage : alerte du navigateur perdue si le service worker n'était pas encore prêt (lot 3).
-- Tests : 179 PHPUnit ; test de fumée Playwright avec échange réel entre deux comptes.
+- Tests : 185 PHPUnit ; test de fumée Playwright avec échange réel entre deux comptes, texte non envoyé conservé, session expirée signalée.
+- Relecture finale indépendante : 2 points importants et 7 mineurs vérifiés ; corrigés sauf trois mineurs reportés (course ajout de membre / message simultané, double envoi possible si « Réessayer » précède la confirmation, test du doublon de création concurrente indirect).
 - À mesurer chez Likuid : charge de l'interrogation (checklist de mise en production).
