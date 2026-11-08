@@ -11,7 +11,7 @@ $id = (int) $target['id'];
 ?>
 <div class="kb-page-title">
     <div class="d-flex align-items-center gap-3">
-        <span class="kb-avatar" aria-hidden="true"><?= e(initials((string) $target['first_name'], (string) $target['last_name'])) ?></span>
+        <?= avatar($target) ?>
         <div>
             <h1><?= e($name) ?></h1>
             <div class="text-secondary small"><?= e($target['email']) ?> · <?php [$statusLabel, $statusTone] = user_status($target); ?><span class="badge text-bg-<?= e($statusTone) ?>"><?= e($statusLabel) ?></span></div>
@@ -51,6 +51,29 @@ $id = (int) $target['id'];
                 <dt class="col-5">Mot de passe changé</dt><dd class="col-7"><?= e(format_date($target['password_changed_at'])) ?></dd>
             </dl>
         </div></div>
+        <?php if (can('users.manage')): ?>
+        <section class="card mt-4" aria-labelledby="admin-photo-title">
+            <h2 class="card-header h6 m-0" id="admin-photo-title">Photo</h2>
+            <div class="card-body d-flex flex-wrap align-items-center gap-3">
+                <?= avatar($target, 'kb-avatar-lg') ?>
+                <form method="post" action="<?= e(url("/admin/users/$id/photo")) ?>" enctype="multipart/form-data" class="flex-grow-1">
+                    <?= csrf_field() ?>
+                    <label class="form-label" for="photo">Choisir une photo (JPEG, PNG ou WebP, 5 Mo au maximum)</label>
+                    <div class="input-group">
+                        <input class="form-control<?= invalid($errors, 'photo') ?>" type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/webp" required>
+                        <button class="btn btn-primary" type="submit">Envoyer</button>
+                    </div>
+                    <?= field_error($errors, 'photo') ?>
+                </form>
+                <?php if (!empty($target['avatar_path'])): ?>
+                    <form method="post" action="<?= e(url("/admin/users/$id/photo/delete")) ?>" data-confirm="Retirer cette photo ?" data-confirm-action="Retirer">
+                        <?= csrf_field() ?>
+                        <button class="btn btn-link px-0" type="submit">Retirer la photo</button>
+                    </form>
+                <?php endif; ?>
+            </div>
+        </section>
+        <?php endif; ?>
     </div>
     <div class="col-lg-7">
         <?php if (can('sessions.manage')): ?>

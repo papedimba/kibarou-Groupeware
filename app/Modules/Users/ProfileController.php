@@ -41,6 +41,26 @@ final class ProfileController extends Controller
         return $this->redirect('/profile', 'Profil mis à jour.');
     }
 
+    public function uploadPhoto(Request $request): Response
+    {
+        $user = $this->user();
+        try {
+            $this->app->avatars()->store((int) $user['id'], (array) ($request->files['photo'] ?? []));
+        } catch (ValidationException $e) {
+            return $this->back('/profile', $e->errors);
+        }
+        $this->app->audit()->log((int) $user['id'], 'profile.photo_updated', 'user', (int) $user['id']);
+        return $this->redirect('/profile', 'Photo enregistrée.');
+    }
+
+    public function deletePhoto(Request $request): Response
+    {
+        $user = $this->user();
+        $this->app->avatars()->remove((int) $user['id']);
+        $this->app->audit()->log((int) $user['id'], 'profile.photo_updated', 'user', (int) $user['id'], ['name' => 'photo retirée']);
+        return $this->redirect('/profile', 'Photo retirée.');
+    }
+
     public function passwordForm(Request $request): Response
     {
         return $this->view('profile/password', ['currentPath' => '/profile']);

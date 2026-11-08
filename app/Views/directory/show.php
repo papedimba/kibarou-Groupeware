@@ -6,7 +6,7 @@ $tel = static fn (string $n): string => preg_replace('/[^0-9+]/', '', $n) ?? '';
 ?>
 <div class="kb-page-title">
     <div class="d-flex align-items-center gap-3">
-        <span class="kb-avatar kb-avatar-lg" aria-hidden="true"><?= e(initials((string) $person['first_name'], (string) $person['last_name'])) ?></span>
+        <?= avatar($person, 'kb-avatar-lg') ?>
         <div>
             <h1><?= e($name) ?></h1>
             <div class="text-secondary"><?= e(implode(' · ', array_filter([$person['position_title'], $person['department_name']])) ?: 'Fonction non renseignée') ?></div>

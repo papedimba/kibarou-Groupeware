@@ -35,6 +35,27 @@ $this->layout('layouts/app', ['title' => 'Mon profil', 'breadcrumbs' => [['Mon p
                 </form>
             </div>
         </div>
+        <section class="card mt-4" aria-labelledby="my-photo-title">
+            <h2 class="card-header h6 m-0" id="my-photo-title">Photo</h2>
+            <div class="card-body d-flex flex-wrap align-items-center gap-3">
+                <?= avatar($currentUser, 'kb-avatar-lg') ?>
+                <form method="post" action="<?= e(url('/profile/photo')) ?>" enctype="multipart/form-data" class="flex-grow-1">
+                    <?= csrf_field() ?>
+                    <label class="form-label" for="photo">Choisir une photo (JPEG, PNG ou WebP, 5 Mo au maximum)</label>
+                    <div class="input-group">
+                        <input class="form-control<?= invalid($errors, 'photo') ?>" type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/webp" required>
+                        <button class="btn btn-primary" type="submit">Envoyer</button>
+                    </div>
+                    <?= field_error($errors, 'photo') ?>
+                </form>
+                <?php if (!empty($currentUser['avatar_path'])): ?>
+                    <form method="post" action="<?= e(url('/profile/photo/delete')) ?>" data-confirm="Retirer cette photo ?" data-confirm-action="Retirer">
+                        <?= csrf_field() ?>
+                        <button class="btn btn-link px-0" type="submit">Retirer la photo</button>
+                    </form>
+                <?php endif; ?>
+            </div>
+        </section>
         <section class="card mt-4" aria-labelledby="my-status-title">
             <h2 class="card-header h6 m-0" id="my-status-title">Mon statut du jour</h2>
             <div class="card-body">

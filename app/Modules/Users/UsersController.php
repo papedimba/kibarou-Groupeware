@@ -131,6 +131,28 @@ final class UsersController extends Controller
         return $this->redirect("/admin/users/$id", 'Lien de réinitialisation mis en file d\'envoi.');
     }
 
+    public function uploadPhoto(Request $request): Response
+    {
+        $id = $this->id($request);
+        $this->repo()->find($id) ?? throw new HttpException(404);
+        try {
+            $this->app->avatars()->store($id, (array) ($request->files['photo'] ?? []));
+        } catch (ValidationException $e) {
+            return $this->redirect("/admin/users/$id", implode(' ', $e->errors), 'danger');
+        }
+        $this->app->audit()->log((int) $this->user()['id'], 'profile.photo_updated', 'user', $id);
+        return $this->redirect("/admin/users/$id", 'Photo enregistrée.');
+    }
+
+    public function deletePhoto(Request $request): Response
+    {
+        $id = $this->id($request);
+        $this->repo()->find($id) ?? throw new HttpException(404);
+        $this->app->avatars()->remove($id);
+        $this->app->audit()->log((int) $this->user()['id'], 'user.photo_removed', 'user', $id);
+        return $this->redirect("/admin/users/$id", 'Photo retirée.');
+    }
+
     public function revokeSessions(Request $request): Response
     {
         $id = $this->id($request);

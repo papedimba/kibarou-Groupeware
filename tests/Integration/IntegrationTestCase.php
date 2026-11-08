@@ -55,6 +55,13 @@ abstract class IntegrationTestCase extends TestCase
         return $this->send(new Request('POST', $path, [], $data, $this->cookies, [], $this->server($ip)));
     }
 
+    /** @param array<string,mixed> $data @param array<string,array<string,mixed>> $files au format $_FILES */
+    protected function postFiles(string $path, array $data, array $files): Response
+    {
+        $data['_csrf'] = $this->csrfToken();
+        return $this->send(new Request('POST', $path, [], $data, $this->cookies, $files, $this->server('10.0.0.1')));
+    }
+
     /** Jeton CSRF de la session courante, lu en base ; une page avec formulaire est chargée si besoin. */
     protected function csrfToken(): string
     {

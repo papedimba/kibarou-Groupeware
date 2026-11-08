@@ -99,6 +99,20 @@ function user_status(array $user): array
     };
 }
 
+/**
+ * Photo de profil (servie par /directory/{id}/photo) ou, à défaut, initiales. Décorative : le nom est affiché à côté.
+ * @param array<string,mixed> $user
+ */
+function avatar(array $user, string $class = ''): string
+{
+    $classes = trim('kb-avatar ' . $class);
+    if (!empty($user['avatar_path'])) {
+        $version = basename((string) $user['avatar_path'], '.webp');
+        return '<img class="' . e($classes) . '" src="' . e(url('/directory/' . (int) $user['id'] . '/photo?v=' . $version)) . '" alt="" loading="lazy" width="64" height="64">';
+    }
+    return '<span class="' . e($classes) . '" aria-hidden="true">' . e(initials((string) $user['first_name'], (string) $user['last_name'])) . '</span>';
+}
+
 /** Date courante UTC au format SQL. */
 function now_utc(): string
 {

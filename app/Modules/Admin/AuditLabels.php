@@ -33,6 +33,8 @@ final class AuditLabels
         'position.created' => 'Fonction créée',
         'position.updated' => 'Fonction modifiée',
         'presence.updated' => 'Statut modifié',
+        'profile.photo_updated' => 'Photo modifiée',
+        'user.photo_removed' => 'Photo retirée',
     ];
 
     private const ALERTS = ['auth.login_failed', 'auth.login_disabled', 'auth.throttled', 'user.disabled', 'user.sessions_revoked'];

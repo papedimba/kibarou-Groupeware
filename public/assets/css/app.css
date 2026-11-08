@@ -208,3 +208,4 @@ body { background: var(--kb-gray-50); font-size: .9375rem; accent-color: var(--k
 .kb-org-node > summary::-webkit-details-marker { display: none; }
 .kb-org-node > summary::before { content: ""; width: .55rem; height: .55rem; border-right: 2px solid var(--kb-gray-500); border-bottom: 2px solid var(--kb-gray-500); transform: rotate(-45deg); margin: 0 .35rem 0 .15rem; transition: transform .15s ease; flex-shrink: 0; }
 .kb-org-node[open] > summary::before { transform: rotate(45deg); }
+img.kb-avatar { object-fit: cover; display: inline-block; }

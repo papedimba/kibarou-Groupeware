@@ -41,6 +41,19 @@ final class DirectoryController extends Controller
         ]);
     }
 
+    public function photo(Request $request): Response
+    {
+        $person = $this->repo()->find($this->id($request)) ?? throw new HttpException(404);
+        $path = $person['avatar_path'] ? $this->app->avatars()->absolutePath((string) $person['avatar_path']) : null;
+        if ($path === null) {
+            throw new HttpException(404);
+        }
+        $response = new Response((string) file_get_contents($path));
+        $response->headers['Content-Type'] = 'image/webp';
+        $response->headers['Cache-Control'] = 'private, max-age=86400';
+        return $response;
+    }
+
     public function show(Request $request): Response
     {
         $person = $this->repo()->find($this->id($request)) ?? throw new HttpException(404);

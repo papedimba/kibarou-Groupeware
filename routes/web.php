@@ -37,11 +37,14 @@ return static function (Router $r): void {
         $r->get('/profile/password', [ProfileController::class, 'passwordForm']);
         $r->post('/profile/password', [ProfileController::class, 'changePassword']);
         $r->post('/profile/sessions/revoke', [ProfileController::class, 'revokeSession']);
+        $r->post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
+        $r->post('/profile/photo/delete', [ProfileController::class, 'deletePhoto']);
 
         $r->group(['perm:directory.view'], static function (Router $r) {
             $r->get('/directory', [DirectoryController::class, 'index']);
             $r->get('/directory/org', [DirectoryController::class, 'org']);
             $r->get('/directory/{id}', [DirectoryController::class, 'show']);
+            $r->get('/directory/{id}/photo', [DirectoryController::class, 'photo']);
             $r->post('/presence', [PresenceController::class, 'update']);
             $r->post('/presence/clear', [PresenceController::class, 'clear']);
             $r->post('/presence/team', [PresenceController::class, 'team']);
@@ -60,6 +63,8 @@ return static function (Router $r): void {
                 $r->post('/admin/users/{id}', [UsersController::class, 'update']);
                 $r->post('/admin/users/{id}/status', [UsersController::class, 'toggleStatus']);
                 $r->post('/admin/users/{id}/reset-link', [UsersController::class, 'sendReset']);
+                $r->post('/admin/users/{id}/photo', [UsersController::class, 'uploadPhoto']);
+                $r->post('/admin/users/{id}/photo/delete', [UsersController::class, 'deletePhoto']);
                 $r->get('/admin/users/{id}/handover', [UsersController::class, 'handover']);
                 $r->post('/admin/users/{id}/handover/done', [UsersController::class, 'handoverDone']);
             });

@@ -31,7 +31,7 @@ $this->layout('layouts/app', ['title' => 'Annuaire', 'breadcrumbs' => [['Annuair
         $search = mb_strtolower(implode(' ', [$name, $m['last_name'] . ' ' . $m['first_name'], $m['position_title'], $m['department_name'], $st['site_label'] ?? '']));
         ?>
         <li class="kb-person" data-search="<?= e($search) ?>">
-            <span class="kb-avatar" aria-hidden="true"><?= e(initials((string) $m['first_name'], (string) $m['last_name'])) ?></span>
+            <?= avatar($m) ?>
             <div class="kb-person-main">
                 <a class="kb-person-name" href="<?= e(url('/directory/' . (int) $m['id'])) ?>"><?= e($name) ?></a>
                 <span class="kb-person-meta"><?= e(implode(' · ', array_filter([$m['position_title'], $m['department_name']])) ?: 'Fonction non renseignée') ?></span>

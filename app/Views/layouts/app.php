@@ -72,7 +72,7 @@ $nav = static function (string $path, string $icon, string $label) use ($current
             <div class="ms-auto d-flex align-items-center gap-2">
                 <div class="dropdown">
                     <button class="btn btn-link text-decoration-none text-body d-flex align-items-center gap-2 p-1" data-bs-toggle="dropdown" aria-expanded="false">
-                        <span class="kb-avatar" aria-hidden="true"><?= e(initials((string) $currentUser['first_name'], (string) $currentUser['last_name'])) ?></span>
+                        <?= avatar($currentUser) ?>
                         <span class="d-none d-md-inline fw-medium"><?= e($currentUser['first_name'] . ' ' . $currentUser['last_name']) ?></span>
                         <i data-lucide="chevron-down" aria-hidden="true"></i>
                     </button>

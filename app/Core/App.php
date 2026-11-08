@@ -6,6 +6,7 @@ namespace App\Core;
 
 use App\Modules\Auth\AuthService;
 use App\Modules\Auth\PasswordResetService;
+use App\Modules\Directory\AvatarService;
 use App\Modules\Directory\DirectoryRepository;
 use App\Modules\Directory\PresenceService;
 use App\Services\AuditLogger;
@@ -124,6 +125,11 @@ final class App
             (int) $this->config['auth']['reset_token_minutes'],
             (int) $this->config['auth']['password_min_length'],
         ));
+    }
+
+    public function avatars(): AvatarService
+    {
+        return $this->service(AvatarService::class, fn () => new AvatarService($this->db(), $this->config['paths']['storage'] . '/private'));
     }
 
     public function presence(): PresenceService

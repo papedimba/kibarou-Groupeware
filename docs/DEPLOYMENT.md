@@ -88,6 +88,7 @@ Elle envoie les emails en file et applique la politique de conservation. Si elle
 ## 9. Checklist de mise en production
 
 - [ ] PHP ≥ 8.2 et extensions vérifiés (`phpinfo()` temporaire, **supprimé** ensuite)
+- [ ] Extension GD avec prise en charge WebP active (photos de profil) ; sans elle, l'envoi de photo est refusé avec un message clair
 - [ ] Limites Likuid obtenues par écrit (CPU, processus, connexions SQL, requêtes/heure) et reportées dans PLAN.md
 - [ ] HTTPS actif, redirection HTTP → HTTPS effective, HSTS présent
 - [ ] `APP_ENV=production`, `APP_DEBUG=false`, `SESSION_SECURE=true`

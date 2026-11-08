@@ -33,4 +33,12 @@ final class HelpersTest extends TestCase
         $this->assertSame(['Pas encore connecté', 'warning'], user_status(['status' => 'active', 'last_login_at' => null]));
         $this->assertSame(['Actif', 'success'], user_status(['status' => 'active', 'last_login_at' => '2026-01-01 00:00:00']));
     }
+
+    public function testAvatarFallsBackToInitials(): void
+    {
+        $this->assertStringContainsString('AD', avatar(['id' => 7, 'first_name' => 'Awa', 'last_name' => 'Diallo', 'avatar_path' => null]));
+        $html = avatar(['id' => 7, 'first_name' => 'Awa', 'last_name' => 'Diallo', 'avatar_path' => 'avatars/7-abc.webp']);
+        $this->assertStringContainsString('/directory/7/photo?v=7-abc', $html);
+        $this->assertStringContainsString('<img', $html);
+    }
 }

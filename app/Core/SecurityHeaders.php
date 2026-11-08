@@ -8,6 +8,7 @@ final class SecurityHeaders
 {
     public static function apply(Response $response, bool $https): void
     {
+        // Les en-têtes déjà posés (ex. Cache-Control d'une photo) sont conservés.
         $response->headers += [
             // Aucune ressource externe ni script inline : tous les assets sont auto-hébergés.
             'Content-Security-Policy' => "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; "
