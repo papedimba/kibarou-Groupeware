@@ -195,6 +195,7 @@ final class UsersController extends Controller
             $this->app->passwordResets(),
             (int) $this->app->config('auth.password_min_length'),
             (string) $this->app->config('app.url'),
+            $this->app->notifier(),
         );
     }
 }

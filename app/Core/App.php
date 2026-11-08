@@ -114,6 +114,7 @@ final class App
             $this->session(),
             $this->audit(),
             $this->config['auth'],
+            $this->notifier(),
         ));
     }
 
@@ -125,6 +126,7 @@ final class App
             $this->audit(),
             (int) $this->config['auth']['reset_token_minutes'],
             (int) $this->config['auth']['password_min_length'],
+            $this->notifier(),
         ));
     }
 
@@ -146,6 +148,7 @@ final class App
             $this->rbac(),
             $this->audit(),
             (string) $this->config['app']['timezone'],
+            $this->notifier(),
         ));
     }
 

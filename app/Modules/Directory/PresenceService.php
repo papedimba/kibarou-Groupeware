@@ -8,6 +8,7 @@ use App\Core\Database;
 use App\Core\HttpException;
 use App\Core\ValidationException;
 use App\Core\Validator;
+use App\Modules\Notifications\Notifier;
 use App\Services\AuditLogger;
 use App\Services\Rbac;
 
@@ -34,6 +35,7 @@ final class PresenceService
         private readonly Rbac $rbac,
         private readonly AuditLogger $audit,
         private readonly string $timezone,
+        private readonly Notifier $notifier,
     ) {
     }
 
@@ -145,6 +147,7 @@ final class PresenceService
         $this->db->run('DELETE FROM user_presence WHERE user_id = ?', [$targetId]);
         if ((int) $actor['id'] !== $targetId) {
             $this->audit->log((int) $actor['id'], 'presence.updated', 'user', $targetId, ['status' => 'effacé']);
+            $this->notifier->notify($targetId, 'presence.changed', 'Votre statut a été effacé par ' . $this->name($actor), '/profile', null, (int) $actor['id']);
         }
     }
 
@@ -205,6 +208,13 @@ final class PresenceService
         );
         if ((int) $actor['id'] !== $targetId) {
             $this->audit->log((int) $actor['id'], 'presence.updated', 'user', $targetId, ['status' => self::LABELS[$data['status']]]);
+            $this->notifier->notify($targetId, 'presence.changed', 'Votre statut a été modifié par ' . $this->name($actor) . ' : ' . self::LABELS[$data['status']], '/profile', null, (int) $actor['id']);
         }
+    }
+
+    /** @param array<string,mixed> $actor */
+    private function name(array $actor): string
+    {
+        return $actor['first_name'] . ' ' . $actor['last_name'];
     }
 }

@@ -6,6 +6,7 @@ namespace App\Modules\Auth;
 
 use App\Core\Database;
 use App\Core\ValidationException;
+use App\Modules\Notifications\Notifier;
 use App\Services\AuditLogger;
 use App\Services\MailQueue;
 
@@ -23,6 +24,7 @@ final class PasswordResetService
         private readonly AuditLogger $audit,
         private readonly int $tokenMinutes,
         private readonly int $passwordMinLength,
+        private readonly Notifier $notifier,
     ) {
     }
 
@@ -92,7 +94,7 @@ final class PasswordResetService
 
     public function reset(string $token, string $password, string $confirm): void
     {
-        $this->db->transaction(function () use ($token, $password, $confirm) {
+        $userId = $this->db->transaction(function () use ($token, $password, $confirm) {
             $row = $this->findValid($token, true);
             if ($row === null) {
                 throw new ValidationException(['password' => 'Ce lien est invalide ou a expiré. Faites une nouvelle demande.']);
@@ -114,7 +116,9 @@ final class PasswordResetService
             $this->db->run('DELETE FROM sessions WHERE user_id = ?', [$row['user_id']]);
             $this->db->run('DELETE FROM login_attempts WHERE email = ? AND success = 0', [$row['email']]);
             $this->audit->log((int) $row['user_id'], 'auth.reset_completed', 'user', (int) $row['user_id']);
+            return (int) $row['user_id'];
         });
+        $this->notifier->notify($userId, 'security.password_changed', 'Votre mot de passe a été modifié', '/profile', 'Si vous n\'êtes pas à l\'origine de ce changement, contactez immédiatement un administrateur.');
     }
 
     /** @return array<string,mixed>|null */

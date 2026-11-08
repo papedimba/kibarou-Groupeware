@@ -8,6 +8,7 @@ use App\Core\Database;
 use App\Core\HttpException;
 use App\Core\Session;
 use App\Core\ValidationException;
+use App\Modules\Notifications\Notifier;
 use App\Services\AuditLogger;
 
 final class AuthService
@@ -23,6 +24,7 @@ final class AuthService
         private readonly Session $session,
         private readonly AuditLogger $audit,
         private readonly array $config,
+        private readonly Notifier $notifier,
     ) {
     }
 
@@ -119,6 +121,10 @@ final class AuthService
             $this->db->run('DELETE FROM sessions WHERE user_id = ? AND id <> ?', [$user['id'], (string) $this->session->id()]);
         });
         $this->audit->log((int) $user['id'], 'auth.password_changed', 'user', (int) $user['id']);
+        // Premier changement imposé (mot de passe temporaire) : fin d'activation, pas une alerte de sécurité.
+        if ((int) $user['must_change_password'] !== 1) {
+            $this->notifier->notify((int) $user['id'], 'security.password_changed', 'Votre mot de passe a été modifié', '/profile', 'Si vous n\'êtes pas à l\'origine de ce changement, contactez immédiatement un administrateur.');
+        }
         $this->user = false;
     }
 

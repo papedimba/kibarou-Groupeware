@@ -10,6 +10,7 @@ use App\Core\ValidationException;
 use App\Core\Validator;
 use App\Modules\Auth\PasswordPolicy;
 use App\Modules\Auth\PasswordResetService;
+use App\Modules\Notifications\Notifier;
 use App\Services\AuditLogger;
 use App\Services\Rbac;
 
@@ -44,6 +45,7 @@ final class UserService
         private readonly PasswordResetService $resets,
         private readonly int $passwordMinLength,
         private readonly string $appUrl,
+        private readonly Notifier $notifier,
     ) {
     }
 
@@ -145,6 +147,9 @@ final class UserService
             }
             $this->audit->log((int) $actor['id'], $active ? 'user.enabled' : 'user.disabled', 'user', $id);
         });
+        if ($active && $target['status'] === 'disabled') {
+            $this->notifier->notify($id, 'account.enabled', 'Votre compte a été réactivé', '/');
+        }
     }
 
     /** Envoie un lien de réinitialisation à l'utilisateur (action d'administrateur). @param array<string,mixed> $actor */
