@@ -48,6 +48,17 @@ erDiagram
 Permissions livrées : `admin.access`, `users.view`, `users.manage`, `organization.manage`, `roles.manage`,
 `sessions.manage`, `audit.view`, `settings.manage`.
 
+## Lot 2 : annuaire et présence (migration 0003)
+
+| Élément | Rôle |
+|---|---|
+| `users.phone_personal` | Téléphone personnel, visible seulement de la personne, de son responsable (hiérarchique ou du service) et des administrateurs ; `users.phone` = téléphone professionnel |
+| `user_presence` | Statut déclaré du jour, une ligne au plus par personne : `status` (office, site, travel, leave, absent), `site_label`, `note`, `start_date` (jour local de la déclaration), `until_date` (≤ 90 jours), `set_by`. Valable jusqu'à `COALESCE(until_date, start_date)` inclus ; nettoyé par `cron:run` |
+| `users.avatar_path` | Chemin relatif `avatars/<id>-<jeton>.webp` sous `storage/private` |
+| Permission `directory.view` | Donnée à tous les rôles système |
+
+« En ligne » n'est pas stocké : calculé depuis `sessions.last_activity_at` (moins de 5 minutes).
+
 ## Modèle prévu des lots suivants (analyse préalable)
 
 Tables listées dans le cahier des charges, avec les décisions de modélisation prises pour éviter les redondances :

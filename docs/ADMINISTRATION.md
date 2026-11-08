@@ -45,6 +45,15 @@ Chaque utilisateur voit ses sessions ouvertes dans **Mon profil** et peut fermer
 L'administrateur (permission `sessions.manage`) peut tout fermer depuis la fiche d'un utilisateur. Changer les rôles
 d'un utilisateur ferme ses sessions, pour que ses nouveaux droits s'appliquent tout de suite.
 
+## Annuaire, organigramme et présence
+
+- **Annuaire** (menu « Annuaire ») : tous les collaborateurs actifs, recherche instantanée par nom, fonction, service ou chantier.
+- **Organigramme** : construit à partir des services (*Administration › Services*) : renseignez pour chaque service son **service parent** et son **responsable**. Les collaborateurs sans service apparaissent dans « Sans service ».
+- **Responsable** d'une personne = son responsable hiérarchique (fiche utilisateur) **ou** le responsable de son service. Il voit son téléphone personnel, peut modifier son statut et dispose sur l'accueil du bloc « Mon équipe aujourd'hui » (mise à jour groupée).
+- **Statut du jour** : « Au bureau », « Sur chantier : … », « En déplacement », « En congé », « Absent ». Sans date de fin, il s'efface le soir ; avec une date de fin (90 jours au plus), il reste jusqu'à ce jour-là.
+- **Téléphones** : le professionnel est visible de tous ; le personnel seulement de la personne, de ses responsables et des administrateurs.
+- **Photos** : chacun envoie la sienne depuis *Mon profil* ; un administrateur peut l'envoyer, la remplacer ou la retirer depuis la fiche utilisateur.
+
 ## Surveillance
 L'**Accueil** d'un administrateur affiche des raccourcis et trois alertes : comptes pas encore connectés, échecs de connexion sur 24 h, emails en échec. **Administration › Vue d'ensemble** : utilisateurs actifs, connectés, échecs de connexion sur 24 h, emails en échec,
 et une alerte si la tâche CRON ne s'exécute plus. **Journal d'audit** : toutes les actions sensibles, en français, filtrables par type d'action.

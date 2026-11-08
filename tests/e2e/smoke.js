@@ -5,9 +5,10 @@ const { chromium, devices } = require('playwright');
 const assert = require('assert');
 
 
-// Cibles tactiles visibles < 44 px de haut (cases à cocher couvertes par leur ligne .kb-check-row).
+// Cibles tactiles visibles < 44 px de haut (cases à cocher couvertes par leur ligne .kb-check-row ;
+// boutons radio .btn-check masqués, la cible est leur libellé .btn).
 async function smallTargets(p) {
-  return p.evaluate(() => [...document.querySelectorAll('button, .btn, input:not([type=hidden]):not([type=checkbox]), select, .kb-check-row')]
+  return p.evaluate(() => [...document.querySelectorAll('button, .btn, input:not([type=hidden]):not([type=checkbox]):not(.btn-check), select, .kb-check-row')]
     .filter(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.right > 0 && r.left < innerWidth && el.closest('.dropdown-menu:not(.show)') === null; })
     .filter(el => el.getBoundingClientRect().height < 44)
     .map(el => `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''} "${(el.innerText || el.value || '').trim().slice(0, 20)}" ${Math.round(el.getBoundingClientRect().height)}px`));
@@ -103,6 +104,24 @@ async function minBorderContrast(p, selector) {
   await mobile.goto(base + '/admin/audit?action=auth.login_failed');
   assert.ok(await mobile.locator('.badge-alert').count() > 0, 'badge d\'alerte présent');
   assert.ok(await minContrast(mobile, '.badge-alert') >= 4.5, 'contraste du badge d\'alerte');
+  // Lot 2 : annuaire sur téléphone — filtre instantané (accents ignorés), cibles tactiles, statut du jour.
+  await mobile.goto(base + '/directory');
+  const before = await mobile.locator('.kb-person:visible').count();
+  await mobile.fill('[data-directory-filter]', 'keita');
+  const after = await mobile.locator('.kb-person:visible').count();
+  assert.ok(before > 1 && after === 1, `filtre instantané (${before} → ${after})`);
+  assert.match(await mobile.locator('.kb-person:visible').innerText(), /Keïta/);
+  for (const path of ['/directory', '/directory/org', '/directory/1']) {
+    await mobile.goto(base + path);
+    assert.deepStrictEqual(await smallTargets(mobile), [], `cibles >= 44 px sur ${path}`);
+  }
+  await mobile.goto(base + '/');
+  await mobile.click('label[for=home-st-office]');
+  await Promise.all([mobile.waitForNavigation(), mobile.click('button:has-text("Enregistrer le statut")')]);
+  await mobile.goto(base + '/directory');
+  const me = mobile.locator('.kb-person', { hasText: 'Pape Dimba' });
+  assert.match(await me.innerText(), /Au bureau/, 'statut visible dans l\'annuaire');
+
   // Tâche 1 : le statut des utilisateurs reste visible sur téléphone
   await mobile.goto(base + '/admin/users');
   const status = mobile.locator('tbody .badge').first();

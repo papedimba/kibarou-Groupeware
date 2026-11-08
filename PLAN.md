@@ -40,8 +40,8 @@ Légende : ✅ terminé et testé · 🔜 prochain · ⏳ planifié
 | Lot | Contenu | État |
 |---|---|---|
 | **1. Socle + authentification + administration** | Routeur, configuration, PDO, migrations, sessions en base, CSRF, en-têtes de sécurité, erreurs ; connexion, déconnexion, réinitialisation, limitation des tentatives, changement de mot de passe imposé ; utilisateurs, services, fonctions, rôles et permissions, sessions, audit, tableau de bord admin ; file d'emails + CRON ; installation CLI et web | ✅ |
-| 2. Annuaire + profil enrichi | Photo (upload privé), organigramme, recherche, présence de base | 🔜 |
-| 3. Notifications | Table `notifications`, préférences, centre de notifications, emails via la file, notifications navigateur | ⏳ |
+| 2. Annuaire + profil enrichi | Annuaire, fiche, organigramme par service, présence (statut déclaré + en ligne), deux téléphones, photo privée | ✅ |
+| 3. Notifications | Table `notifications`, préférences, centre de notifications, emails via la file, notifications navigateur | 🔜 |
 | 4. Messagerie | Conversations privées, groupes, salons, salons de service, pièces jointes privées, réactions, réponses, modification, suppression logique, lus/non lus, accusés, présence, indicateur de saisie, recherche, polling adaptatif | ⏳ |
 | 5. Calendrier + réunions | Événements, participants, invitations, rappels CRON, récurrence (RRULE simplifiée), export ICS ; convocations, ordre du jour, comptes rendus, décisions, actions | ⏳ |
 | 6. Tâches + projets | Tâches, Kanban, commentaires, pièces jointes, historique ; projets, membres, jalons, progression | ⏳ |
@@ -77,3 +77,9 @@ Ordre justifié : l'annuaire et les notifications sont des dépendances de la me
   accueil utile et erreurs 403/404 dans l'interface ; finition (surfaces navigateur, contrastes résiduels).
 - Détecteur Impeccable sur le HTML rendu : 84 signalements → 1 avis volontaire (tirets « — » des cellules vides).
 - Tests : 68 PHPUnit, test de fumée Playwright étendu (cibles tactiles, contrastes, statut visible sur mobile, confirmation, double envoi).
+
+### Lot 2 — Annuaire, organigramme et présence — 08/11/2026
+- Conception : `docs/superpowers/specs/2026-11-07-annuaire-presence-design.md` ; plan : `docs/superpowers/plans/2026-11-07-lot2-annuaire-presence.md`.
+- Livré : annuaire avec recherche instantanée (accents ignorés), fiche, organigramme par service, statut déclaré du jour (bureau, chantier, déplacement, congé, absent) avec mise à jour groupée par le responsable, pastille « en ligne », téléphones professionnel / personnel, photo de profil réencodée et privée, nettoyage nocturne.
+- Tests : 108 PHPUnit, test de fumée Playwright étendu ; détecteur Impeccable sans signalement sur les nouvelles pages.
+- À vérifier chez Likuid : extension GD avec WebP (checklist de mise en production).
