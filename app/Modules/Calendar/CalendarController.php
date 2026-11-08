@@ -47,9 +47,11 @@ final class CalendarController extends Controller
         unset($day);
         $step = ['week' => '+1 week', 'month' => '+1 month', 'list' => '+60 days'][$view];
         $back = ['week' => '-1 week', 'month' => '-1 month', 'list' => '-60 days'][$view];
+        // Mois : depuis le 1er, sinon le 30 janvier + 1 mois tombe en mars.
+        $anchor = $view === 'month' ? $date->modify('first day of this month') : $date;
         return $this->view('calendar/index', [
             'currentPath' => '/calendar', 'view' => $view, 'date' => $date, 'days' => $days,
-            'prev' => $date->modify($back)->format('Y-m-d'), 'next' => $date->modify($step)->format('Y-m-d'),
+            'prev' => $anchor->modify($back)->format('Y-m-d'), 'next' => $anchor->modify($step)->format('Y-m-d'),
             'firstHour' => self::FIRST_HOUR, 'lastHour' => self::LAST_HOUR,
         ]);
     }

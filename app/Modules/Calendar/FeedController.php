@@ -42,10 +42,15 @@ final class FeedController extends Controller
     public function feed(Request $request): Response
     {
         $hash = hash('sha256', (string) ($request->params['token'] ?? ''));
-        $userId = $this->app->db()->value('SELECT user_id FROM calendar_feeds WHERE token_hash = ?', [$hash]);
-        if ($userId === null) {
+        // Compte désactivé ou sans accès au calendrier : le lien ne donne plus rien.
+        $owner = $this->app->db()->fetch(
+            "SELECT u.* FROM calendar_feeds f JOIN users u ON u.id = f.user_id AND u.status = 'active' AND u.deleted_at IS NULL WHERE f.token_hash = ?",
+            [$hash],
+        );
+        if ($owner === null || !$this->app->rbac()->can($owner, 'calendar.use')) {
             throw new HttpException(404);
         }
+        $userId = (int) $owner['id'];
         $db = $this->app->db();
         $db->run('DELETE FROM calendar_feed_hits WHERE token_hash = ? AND hit_at < UTC_TIMESTAMP() - INTERVAL 1 HOUR', [$hash]);
         if ((int) $db->value('SELECT COUNT(*) FROM calendar_feed_hits WHERE token_hash = ?', [$hash]) >= self::HITS_PER_HOUR) {

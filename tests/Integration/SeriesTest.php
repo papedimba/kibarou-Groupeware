@@ -140,4 +140,53 @@ final class SeriesTest extends IntegrationTestCase
         $this->assertSame(7, $count());
         $this->assertSame($this->monday()->modify('+6 weeks')->format('Y-m-d'), $this->app->db()->value('SELECT until_date FROM calendar_series WHERE id = ?', [$sid]));
     }
+
+    public function testMonthlyNeverAfterUntil(): void
+    {
+        $dates = array_map(static fn ($d) => $d->format('Y-m-d'), (new SeriesService())->occurrences('monthly', [], new DateTimeImmutable('2027-01-15 09:00'), new DateTimeImmutable('2027-03-10')));
+        $this->assertSame(['2027-01-15', '2027-02-15'], $dates);
+    }
+
+    public function testEmptySeriesRefused(): void
+    {
+        $a = $this->createUser('a@kibarou.test');
+        $m = $this->monday();
+        try {
+            $this->app->events()->create($this->u($a), ['title' => 'Jamais', 'start' => $m->format('Y-m-d H:i'), 'end' => $m->modify('+1 hour')->format('Y-m-d H:i'),
+                'repeat' => 'weekly', 'weekdays' => ['3'], 'until' => $m->modify('+1 day')->format('Y-m-d')]);
+            $this->fail('Série vide acceptée');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('until', $e->errors);
+        }
+        $this->assertSame(0, (int) $this->app->db()->value('SELECT COUNT(*) FROM calendar_series'));
+    }
+
+    public function testExtensionBeyondLimitChangesNothing(): void
+    {
+        [$a, $b, $ids] = $this->weekly();
+        $this->app->events()->respond($this->u($b), $ids[0], 'yes', 'series');
+        $e = $this->event($ids[2]);
+        $start = $this->app->events()->toLocal($e['start_at'])->setTime(11, 0);
+        try {
+            $this->app->events()->update($this->u($a), $ids[2], ['title' => 'Réunion de chantier', 'start' => $start->format('Y-m-d H:i'),
+                'end' => $start->modify('+1 hour')->format('Y-m-d H:i'), 'reminder' => '15', 'participants' => [(string) $b],
+                'until' => $this->monday()->modify('+14 months')->format('Y-m-d')], 'following');
+            $this->fail('Prolongation au-delà d\'un an acceptée');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('until', $e->errors);
+        }
+        $this->assertSame('08:00', $this->app->events()->toLocal($this->event($ids[2])['start_at'])->format('H:i'));
+        $this->assertSame('yes', $this->app->db()->value('SELECT response FROM event_participants WHERE event_id = ? AND user_id = ?', [$ids[2], $b]));
+    }
+
+    public function testShorteningNotifiesCancelled(): void
+    {
+        [$a, $b, $ids] = $this->weekly();
+        $this->app->db()->run('DELETE FROM notifications');
+        $e = $this->event($ids[2]);
+        $local = fn (string $utc) => $this->app->events()->toLocal($utc)->format('Y-m-d H:i');
+        $this->app->events()->update($this->u($a), $ids[2], ['title' => 'Réunion de chantier', 'start' => $local($e['start_at']), 'end' => $local($e['end_at']),
+            'reminder' => '15', 'participants' => [(string) $b], 'until' => $this->monday()->modify('+4 weeks')->format('Y-m-d')], 'following');
+        $this->assertSame([$b], array_map('intval', array_column($this->app->db()->fetchAll("SELECT user_id FROM notifications WHERE type = 'calendar.cancelled'"), 'user_id')));
+    }
 }

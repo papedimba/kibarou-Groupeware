@@ -35,7 +35,10 @@ final class SeriesService
             for ($m = $first->modify('first day of this month'); $m <= $last; $m = $m->modify('first day of next month')) {
                 // Mois sans ce jour (31, 30, 29 février) : sauté.
                 if (checkdate((int) $m->format('n'), $day, (int) $m->format('Y'))) {
-                    $out[] = $m->setDate((int) $m->format('Y'), (int) $m->format('n'), $day)->setTime((int) $first->format('H'), (int) $first->format('i'));
+                    $occ = $m->setDate((int) $m->format('Y'), (int) $m->format('n'), $day)->setTime((int) $first->format('H'), (int) $first->format('i'));
+                    if ($occ >= $first && $occ <= $last) {
+                        $out[] = $occ;
+                    }
                 }
             }
         } else {

@@ -27,4 +27,22 @@ final class CalendarPagesTest extends IntegrationTestCase
         $this->assertMatchesRegularExpression('/kb-cal-allday[^<]*>[^<]*<[^>]*>?[^<]*Inventaire du dépôt|kb-cal-allday.*?Inventaire du dépôt/s', $this->get('/calendar', ['view' => 'week', 'date' => $day])->body);
         $this->assertStringContainsString('Réunion de chantier', $this->get("/calendar/events/$id")->body);
     }
+
+    public function testMonthNavigationFromEndOfMonth(): void
+    {
+        $this->createUser('a@kibarou.test');
+        $this->login('a@kibarou.test', 'Motdepasse123');
+        $jan = $this->get('/calendar', ['view' => 'month', 'date' => '2027-01-30'])->body;
+        $this->assertStringContainsString('view=month&amp;date=2027-02-01', $jan);
+        $mar = $this->get('/calendar', ['view' => 'month', 'date' => '2027-03-31'])->body;
+        $this->assertStringContainsString('view=month&amp;date=2027-02-01', $mar);
+        $this->assertStringContainsString('view=month&amp;date=2027-04-01', $mar);
+    }
+
+    public function testWeekGridHasNoFakeGridRoles(): void
+    {
+        $this->createUser('a@kibarou.test');
+        $this->login('a@kibarou.test', 'Motdepasse123');
+        $this->assertStringNotContainsString('role="grid"', $this->get('/calendar', ['view' => 'week'])->body);
+    }
 }

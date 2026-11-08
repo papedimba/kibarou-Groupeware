@@ -39,6 +39,9 @@ final class EventService
         $me = (int) $actor['id'];
         $invited = $this->invitees($input, $me);
         $rows = $this->expand($data, $input);
+        if ($rows === []) {
+            throw new ValidationException(['until' => 'Aucune date de la série ne tombe dans cette période.']);
+        }
         $id = $this->db->transaction(function () use ($rows, $input, $me, $invited) {
             $seriesId = count($rows) > 1 || in_array($input['repeat'] ?? '', ['weekdays', 'weekly', 'monthly'], true) ? $this->db->insert('calendar_series', [
                 'organizer_id' => $me, 'kind' => $input['repeat'], 'weekdays' => implode(',', array_map('intval', (array) ($input['weekdays'] ?? []))) ?: null,
@@ -78,7 +81,12 @@ final class EventService
         $timeChanged = false;
         $added = [];
         $before = [];
-        $this->db->transaction(function () use ($targets, $wanted, $me, $event, $scope, &$timeChanged, &$added, &$before) {
+        $cancelledLater = 0;
+        if ($scope === 'following' && $event['series_id'] !== null && !empty($input['until'])) {
+            // Nouvelle date de fin validée avant toute écriture (1 an et 260 occurrences au plus).
+            $this->seriesDates($event, $data, (string) $input['until']);
+        }
+        $this->db->transaction(function () use ($targets, $wanted, $me, $event, $scope, $data, $input, &$timeChanged, &$added, &$before, &$cancelledLater) {
             foreach ($targets as $id => $row) {
                 $old = $this->db->fetch('SELECT * FROM events WHERE id = ?', [$id]);
                 $current = array_map('intval', array_column($this->db->fetchAll('SELECT user_id FROM event_participants WHERE event_id = ? AND user_id <> ?', [$id, $me]), 'user_id'));
@@ -103,9 +111,15 @@ final class EventService
                     $this->db->run('UPDATE event_participants SET reminder_minutes = ?, reminded_at = NULL WHERE event_id = ? AND reminder_custom = 0', [$row['reminder_minutes'], $id]);
                 }
             }
+            // Dans la même transaction : une date de fin refusée (plus d'un an) annule toute la modification.
+            if ($scope === 'following' && $event['series_id'] !== null && !empty($input['until'])) {
+                $cancelledLater = $this->resizeSeries($event, $data, (string) $input['until']);
+            }
         });
-        if ($scope === 'following' && $event['series_id'] !== null && !empty($input['until'])) {
-            $this->resizeSeries($event, $data, (string) $input['until']);
+        if ($cancelledLater > 0) {
+            $others = array_map('intval', array_column($this->db->fetchAll('SELECT user_id FROM event_participants WHERE event_id = ? AND user_id <> ?', [$eventId, $me]), 'user_id'));
+            $this->notifyParticipants($actor, $eventId, 'calendar.cancelled', 'Annulé : ' . $data['title'] . ' — dates après le '
+                . (new \DateTimeImmutable(substr((string) $input['until'], 0, 10)))->format('d/m/Y'), $others);
         }
         $added = array_values(array_unique(array_diff($added, $before)));
         $visibleChange = $timeChanged || $event['title'] !== $data['title'] || (string) $event['location'] !== (string) $data['location'];
@@ -322,22 +336,20 @@ final class EventService
      * réponses de l'occurrence modifiée, ou annulées au-delà de la nouvelle fin. 1 an et 260 occurrences au plus.
      * @param array<string,mixed> $event @param array<string,mixed> $data
      */
-    private function resizeSeries(array $event, array $data, string $until): void
+    private function resizeSeries(array $event, array $data, string $until): int
     {
         $series = $this->db->fetch('SELECT * FROM calendar_series WHERE id = ?', [$event['series_id']]);
         $newUntil = \DateTimeImmutable::createFromFormat('!Y-m-d', substr($until, 0, 10), $this->timezone());
         if ($series === null || $newUntil === false || $newUntil->format('Y-m-d') === $series['until_date']) {
-            return;
+            return 0;
         }
         $rows = $this->db->fetchAll("SELECT * FROM events WHERE series_id = ? ORDER BY COALESCE(start_at, start_date)", [$series['id']]);
-        [$first] = $this->shape($rows[0]);
         $current = $this->db->fetch('SELECT * FROM events WHERE id = ?', [$event['id']]);
-        [$start, $minutes, $days] = $this->shape($current);
-        $dates = (new SeriesService())->occurrences((string) $series['kind'], array_filter(array_map('intval', explode(',', (string) $series['weekdays']))),
-            $first->setTime((int) $start->format('H'), (int) $start->format('i')), $newUntil);
+        [, $minutes, $days] = $this->shape($current);
+        $dates = $this->seriesDates($event, $current, $until);
         $existing = array_map(fn ($r) => $this->shape($r)[0]->format('Y-m-d'), $rows);
         $people = $this->db->fetchAll('SELECT * FROM event_participants WHERE event_id = ?', [$event['id']]);
-        $this->db->transaction(function () use ($dates, $existing, $series, $current, $minutes, $days, $people, $newUntil) {
+        return $this->db->transaction(function () use ($dates, $existing, $series, $current, $minutes, $days, $people, $newUntil) {
             foreach ($dates as $d) {
                 if (in_array($d->format('Y-m-d'), $existing, true) || $d->format('Y-m-d') <= max($existing)) {
                     continue;
@@ -350,10 +362,29 @@ final class EventService
                         'reminder_minutes' => $p['reminder_minutes'], 'reminder_custom' => $p['reminder_custom'], 'responded_at' => $p['responded_at']]);
                 }
             }
-            $this->db->run("UPDATE events SET status = 'cancelled', updated_at = UTC_TIMESTAMP() WHERE series_id = ? AND status = 'confirmed'
-                AND COALESCE(start_date, DATE(start_at)) > ?", [$series['id'], $newUntil->format('Y-m-d')]);
+            $cancelled = $this->db->run("UPDATE events SET status = 'cancelled', updated_at = UTC_TIMESTAMP() WHERE series_id = ? AND status = 'confirmed'
+                AND COALESCE(start_date, DATE(start_at)) > ?", [$series['id'], $newUntil->format('Y-m-d')])->rowCount();
             $this->db->update('calendar_series', ['until_date' => $newUntil->format('Y-m-d')], ['id' => $series['id']]);
+            return $cancelled;
         });
+    }
+
+    /**
+     * Dates de toute la série jusqu'à $until, à l'heure de $data (lève ValidationException au-delà des limites).
+     * @param array<string,mixed> $event @param array<string,mixed> $data @return list<DateTimeImmutable>
+     */
+    private function seriesDates(array $event, array $data, string $until): array
+    {
+        $series = $this->db->fetch('SELECT * FROM calendar_series WHERE id = ?', [$event['series_id']]);
+        $newUntil = \DateTimeImmutable::createFromFormat('!Y-m-d', substr($until, 0, 10), $this->timezone());
+        if ($series === null || $newUntil === false) {
+            throw new ValidationException(['until' => 'Date de fin invalide.']);
+        }
+        $firstRow = $this->db->fetch('SELECT * FROM events WHERE series_id = ? ORDER BY COALESCE(start_at, start_date) LIMIT 1', [$series['id']]);
+        [$first] = $this->shape($firstRow);
+        [$start] = $this->shape($data);
+        return (new SeriesService())->occurrences((string) $series['kind'], array_filter(array_map('intval', explode(',', (string) $series['weekdays']))),
+            $first->setTime((int) $start->format('H'), (int) $start->format('i')), $newUntil);
     }
 
     /**

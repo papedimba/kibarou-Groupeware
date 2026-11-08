@@ -106,4 +106,14 @@ final class FeedTest extends IntegrationTestCase
         $this->login('c@kibarou.test', 'Motdepasse123');
         $this->assertSame(404, $this->get("/calendar/events/$id.ics")->status);
     }
+
+    public function testDisabledUserFeedStops(): void
+    {
+        $a = $this->createUser('a@kibarou.test');
+        $this->login('a@kibarou.test', 'Motdepasse123');
+        $path = $this->feedPath();
+        $this->app->db()->update('users', ['status' => 'disabled'], ['id' => $a]);
+        $this->cookies = [];
+        $this->assertSame(404, $this->get($path)->status);
+    }
 }
