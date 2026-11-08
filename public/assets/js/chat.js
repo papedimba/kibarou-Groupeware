@@ -27,10 +27,24 @@
     function store(k, v) { try { if (v === null || v === '') { window.localStorage.removeItem(k); } else { window.localStorage.setItem(k, v); } } catch (e) { /* stockage indisponible */ } }
     function load(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
     // Textes partis mais non confirmés par le serveur, par conversation.
+    // Entrée : {text, client_id, attachments, reply_to} ; l'ancien format (simple texte, lot 4a) reste lisible.
     var unsentKey = 'kb-unsent-' + cid;
-    function unsent() { try { return JSON.parse(load(unsentKey) || '[]'); } catch (e) { return []; } }
-    function keep(text) { var l = unsent(); l.push(text); store(unsentKey, JSON.stringify(l)); }
-    function forget(text) { var l = unsent(), i = l.indexOf(text); if (i !== -1) { l.splice(i, 1); } store(unsentKey, l.length ? JSON.stringify(l) : ''); }
+    function unsent() {
+        try { return JSON.parse(load(unsentKey) || '[]').map(function (u) { return typeof u === 'string' ? { text: u } : u; }); } catch (e) { return []; }
+    }
+    function keep(entry) { var l = unsent(); l.push(entry); store(unsentKey, JSON.stringify(l)); }
+    function forget(clientId) {
+        var l = unsent().filter(function (u) { return u.client_id !== clientId; });
+        store(unsentKey, l.length ? JSON.stringify(l) : '');
+    }
+    function newClientId() {
+        var b = new Uint8Array(16);
+        window.crypto.getRandomValues(b);
+        return [].map.call(b, function (x) { return (x < 16 ? '0' : '') + x.toString(16); }).join('');
+    }
+    var EDIT_WINDOW = 15 * 60 * 1000;
+    var REACTIONS = ['👍', '✅', '👀', '🙏', '❤️', '😂'];
+    var finePointer = window.matchMedia('(pointer: fine)').matches;
 
     // --- Rythme : actif (interaction récente), au repos, ou onglet en arrière-plan ---
     // lastInteraction règle le rythme (l'ouverture de la page compte) ; lastInput, lui, ne compte que les vraies
@@ -141,26 +155,127 @@
             li.textContent = systemText(ev) + ' · ' + hour(ev.created_at);
             return li;
         }
-        var mine = ev.sender_id === me;
+        return renderMessage(ev, li);
+    }
+    function icon(name) {
+        var i = document.createElement('i');
+        i.setAttribute('data-lucide', name); i.setAttribute('aria-hidden', 'true');
+        return i;
+    }
+    function el(tag, cls, text) {
+        var n = document.createElement(tag);
+        if (cls) { n.className = cls; }
+        if (text !== undefined) { n.textContent = text; }
+        return n;
+    }
+    function sizeLabel(bytes) {
+        if (bytes < 1024) { return bytes + ' octets'; }
+        if (bytes < 1048576) { return Math.round(bytes / 1024) + ' Ko'; }
+        return (bytes / 1048576).toFixed(1).replace('.', ',').replace(',0', '') + ' Mo';
+    }
+    // Même structure que app/Views/chat/_message.php.
+    function bubbleFor(ev, sender) {
+        var mine = ev.sender_id === me, bubble = el('div', 'kb-msg-bubble');
+        if (!mine) { bubble.appendChild(el('span', 'visually-hidden', sender + ' : ')); }
+        if (ev.deleted) {
+            bubble.appendChild(el('em', 'kb-msg-deleted', 'Message supprimé'));
+            return bubble;
+        }
+        if (ev.reply_to) {
+            var r = ev.reply_to, quote = el('a', 'kb-msg-reply');
+            quote.href = '#m' + r.id; quote.setAttribute('data-reply-to', String(r.id));
+            if (r.hidden) { quote.textContent = 'Message antérieur à votre arrivée'; }
+            else if (r.deleted) { quote.textContent = 'Message supprimé'; }
+            else { quote.appendChild(el('strong', '', r.sender_name || '')); quote.appendChild(document.createTextNode(' ' + (r.excerpt || ''))); }
+            bubble.appendChild(quote);
+        }
+        var atts = ev.attachments || [];
+        var photos = atts.filter(function (a) { return a.kind === 'image'; }), files = atts.filter(function (a) { return a.kind !== 'image'; });
+        if (photos.length) {
+            var grid = el('div', 'kb-msg-photos kb-msg-photos-' + Math.min(photos.length, 4));
+            photos.forEach(function (p, i) {
+                var a = el('a', i < 4 ? 'kb-msg-photo' : 'kb-msg-photo-extra');
+                a.href = p.url; a.setAttribute('data-photo', '');
+                if (i < 4) {
+                    if (i === 3 && photos.length > 4) { a.setAttribute('data-more', '+' + (photos.length - 4)); }
+                    var img = document.createElement('img');
+                    img.src = p.thumb_url; img.alt = 'Photo envoyée par ' + sender; img.loading = 'lazy';
+                    if (p.width) { img.width = p.width; img.height = p.height; }
+                    a.appendChild(img);
+                    grid.appendChild(a);
+                } else { a.hidden = true; a.textContent = 'Photo'; bubble.appendChild(a); }
+            });
+            bubble.insertBefore(grid, bubble.querySelector('.kb-msg-photo-extra'));
+        }
+        files.forEach(function (f) {
+            var a = el('a', 'kb-msg-file');
+            a.href = f.url; a.setAttribute('download', '');
+            a.appendChild(icon(/\.xlsx$/i.test(f.name) ? 'file-spreadsheet' : 'file-text'));
+            var t = el('span', 'kb-msg-file-text');
+            t.appendChild(el('span', 'kb-msg-file-name', f.name));
+            t.appendChild(el('span', 'kb-msg-file-size', sizeLabel(f.size) + ' · Télécharger'));
+            a.appendChild(t);
+            bubble.appendChild(a);
+        });
+        if (ev.body) { var text = el('div', 'kb-msg-text'); fillText(text, ev.body); bubble.appendChild(text); }
+        return bubble;
+    }
+    function reactionsFor(list) {
+        if (!list || !list.length) { return null; }
+        var wrap = el('div', 'kb-msg-reactions');
+        list.forEach(function (r) {
+            var b = el('button', 'kb-reaction');
+            b.type = 'button'; b.setAttribute('data-react', r.emoji); b.setAttribute('aria-pressed', r.mine ? 'true' : 'false');
+            b.title = r.names.join(', ');
+            var shown = el('span', '', r.emoji + ' ' + r.count); shown.setAttribute('aria-hidden', 'true');
+            b.appendChild(shown);
+            b.appendChild(el('span', 'visually-hidden', r.emoji + ' : ' + r.names.join(', ')));
+            wrap.appendChild(b);
+        });
+        return wrap;
+    }
+    function actionsButton() {
+        var b = el('button', 'kb-msg-actions-btn');
+        b.type = 'button'; b.setAttribute('data-msg-actions', ''); b.setAttribute('aria-label', 'Actions sur ce message');
+        b.hidden = !finePointer;
+        b.appendChild(icon('ellipsis'));
+        return b;
+    }
+    function renderMessage(ev, li) {
+        var mine = ev.sender_id === me, sender = ev.sender_name || '';
         li.className = 'kb-msg' + (mine ? ' is-mine' : '');
-        if (isGroup && !mine) {
-            var author = document.createElement('span');
-            author.className = 'kb-msg-author'; author.textContent = ev.sender_name || '';
-            li.appendChild(author);
-        }
-        var bubble = document.createElement('div');
-        bubble.className = 'kb-msg-bubble';
-        if (!mine) {
-            var who = document.createElement('span');
-            who.className = 'visually-hidden'; who.textContent = (ev.sender_name || '') + ' : ';
-            bubble.appendChild(who);
-        }
-        fillText(bubble, ev.body || '');
-        li.appendChild(bubble);
-        var t = document.createElement('time');
-        t.className = 'kb-msg-time'; t.dateTime = ev.created_at; t.textContent = hour(ev.created_at);
-        li.appendChild(t);
+        if (ev.message_id) { li.id = 'm' + ev.message_id; li.setAttribute('data-message-id', String(ev.message_id)); }
+        li.setAttribute('data-mine', mine ? '1' : '0');
+        li.setAttribute('data-created', ev.created_at);
+        li.setAttribute('data-deleted', ev.deleted ? '1' : '0');
+        if (isGroup && !mine) { li.appendChild(el('span', 'kb-msg-author', sender)); }
+        li.appendChild(bubbleFor(ev, sender));
+        var meta = el('span', 'kb-msg-meta'), t = el('time', 'kb-msg-time', hour(ev.created_at));
+        t.dateTime = ev.created_at;
+        meta.appendChild(t);
+        if (ev.edited_at && !ev.deleted) { meta.appendChild(el('span', 'kb-msg-edited', 'modifié')); }
+        meta.appendChild(actionsButton());
+        li.appendChild(meta);
+        var reactions = reactionsFor(ev.reactions);
+        if (reactions) { li.appendChild(reactions); }
+        if (window.lucide) { window.lucide.createIcons(); }
         return li;
+    }
+    // Modification, suppression ou réaction : la bulle existante est mise à jour en place.
+    function updateMessage(ev) {
+        var li = box && box.querySelector('.kb-msg[data-message-id="' + ev.message_id + '"]');
+        if (!li) { return; }
+        var hidden = li.querySelector('.kb-msg-bubble > .visually-hidden');
+        var sender = hidden ? hidden.textContent.replace(/ : $/, '') : '';
+        li.querySelector('.kb-msg-bubble').replaceWith(bubbleFor(ev, sender));
+        li.setAttribute('data-deleted', ev.deleted ? '1' : '0');
+        var meta = li.querySelector('.kb-msg-meta'), edited = meta.querySelector('.kb-msg-edited');
+        if (ev.edited_at && !ev.deleted && !edited) { meta.insertBefore(el('span', 'kb-msg-edited', 'modifié'), meta.querySelector('[data-msg-actions]')); }
+        if (ev.deleted && edited) { edited.remove(); }
+        var old = li.querySelector('.kb-msg-reactions'), fresh = reactionsFor(ev.reactions);
+        if (old) { old.remove(); }
+        if (fresh) { li.appendChild(fresh); }
+        if (window.lucide) { window.lucide.createIcons(); }
     }
     function daySeparator(label) {
         var li = document.createElement('li'), span = document.createElement('span');
@@ -173,6 +288,7 @@
 
     function appendEvent(ev, fromPoll) {
         if (!box || box.querySelector('[data-event-id="' + ev.id + '"]')) { return; }
+        if (ev.type === 'message_edited' || ev.type === 'message_deleted' || ev.type === 'reaction') { updateMessage(ev); return; }
         var stick = nearBottom() || !fromPoll;
         var empty = box.querySelector('[data-chat-empty]');
         if (empty) { empty.remove(); }
@@ -180,8 +296,8 @@
         if (!days.length || days[days.length - 1].getAttribute('data-day') !== label) { box.appendChild(daySeparator(label)); }
         if (fromPoll && ev.sender_id === me) {
             // Envoi réussi côté serveur malgré une réponse perdue : la bulle « Non envoyé » disparaît.
-            var dup = [].filter.call(box.querySelectorAll('.kb-msg.is-failed'), function (b) { return b.dataset.text === ev.body; })[0];
-            if (dup) { dup.remove(); forget(ev.body); }
+            var dup = ev.client_id && box.querySelector('.kb-msg.is-failed[data-client-id="' + ev.client_id + '"]');
+            if (dup) { dup.remove(); forget(ev.client_id); }
         }
         var pending = box.querySelector('.kb-msg.is-pending');
         box.insertBefore(buildEvent(ev), pending && fromPoll ? pending : null);
@@ -217,7 +333,8 @@
             item = a;
         }
         var lastEl = item.querySelector('.kb-chat-item-last');
-        if (lastEl) { lastEl.textContent = (ev.body || '').slice(0, 80); }
+        var first = (ev.attachments || [])[0];
+        if (lastEl) { lastEl.textContent = ev.body ? ev.body.slice(0, 80) : first ? (first.kind === 'image' ? 'Photo' : 'Fichier : ' + first.name) : ''; }
         var time = item.querySelector('.kb-chat-item-time');
         if (time) { time.textContent = 'à l\'instant'; }
         list.insertBefore(item.parentNode, list.firstChild);
@@ -281,70 +398,102 @@
     // --- Saisie et envoi ---
     if (form && conv) {
         var input = form.querySelector('textarea');
+        var sendBtn = form.querySelector('.kb-chat-send');
+        var files = window.kbChatAttachments || null;
+        var banner = form.querySelector('[data-chat-banner]'), bannerText = form.querySelector('[data-chat-banner-text]');
         var draftKey = 'kb-draft-' + cid;
+        var replyTo = null, editing = null;
+        // Un message peut ne contenir que des pièces jointes : le contrôle « requis » reste pour l'envoi sans JavaScript.
+        input.removeAttribute('required');
         var grow = function () { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight + 2, 160) + 'px'; };
         if (!input.value) { input.value = load(draftKey) || ''; }
         grow();
-        input.addEventListener('input', function () { store(draftKey, input.value); grow(); });
+        input.addEventListener('input', function () { if (!editing) { store(draftKey, input.value); } grow(); });
         // PC : Entrée envoie, Maj+Entrée va à la ligne. Écran tactile : Entrée va à la ligne.
         var touch = window.matchMedia('(pointer: coarse)').matches;
         input.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && !e.shiftKey && !touch && !e.isComposing) { e.preventDefault(); form.requestSubmit(); }
+            if (e.key === 'Escape' && (replyTo || editing)) { cancelMode(); }
         });
+        var syncSend = function () { sendBtn.disabled = !!(files && files.busy()); };
+        form.addEventListener('kb-attachments-change', syncSend);
 
         var error = document.createElement('div');
         error.className = 'invalid-feedback d-block'; error.setAttribute('role', 'alert'); error.hidden = true;
         form.appendChild(error);
-
-        // Textes partis mais non confirmés : conservés à part jusqu'à la réponse du serveur (rechargement, session expirée).
-        var restore = function (text) {
-            input.value = input.value ? text + '\n\n' + input.value : text;
-            store(draftKey, input.value); grow();
+        var showError = function (data, fallback) {
+            var errs = (data && data.errors) || {};
+            error.textContent = errs.body || errs.attachments || errs.reply_to || errs.emoji || (data && data.error) || fallback;
+            error.hidden = false;
         };
-        // Au chargement : un texte resté sans confirmation revient dans la zone de saisie.
-        unsent().forEach(function (text) { restore(text); });
+
+        // Bandeau « Réponse à … » ou « Modification du message ».
+        var setMode = function (text) { bannerText.textContent = text; banner.hidden = false; };
+        var cancelMode = function () {
+            if (editing) { input.value = load(draftKey) || ''; grow(); }
+            replyTo = null; editing = null; banner.hidden = true;
+        };
+        form.querySelector('[data-chat-banner-cancel]').addEventListener('click', function () { cancelMode(); input.focus(); });
+
+        var restore = function (entry) {
+            input.value = input.value ? entry.text + '\n\n' + input.value : (entry.text || '');
+            store(draftKey, input.value); grow();
+            if (files && entry.attachments) { files.restore(entry.attachments); }
+            if (entry.client_id) { pendingClientId = entry.client_id; }
+        };
+        // Au chargement : un message resté sans confirmation revient (texte, pièces déjà envoyées, même identifiant).
+        var pendingClientId = null;
+        unsent().forEach(function (entry) { restore(entry); });
         store(unsentKey, '');
 
-        var send = function (text, bubble) {
-            error.hidden = true;
-            return fetch(base + 'api/chat/conversations/' + cid + '/messages', {
+        var post = function (url, payload) {
+            return fetch(base + url, {
                 method: 'POST', credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-Token': csrf },
-                body: JSON.stringify({ body: text })
+                body: JSON.stringify(payload)
             }).then(function (r) {
                 return r.json().catch(function () { return {}; }).then(function (data) { return { status: r.status, data: data }; });
+            });
+        };
+        var send = function (entry, bubble) {
+            error.hidden = true;
+            return post('api/chat/conversations/' + cid + '/messages', {
+                body: entry.text, client_id: entry.client_id, reply_to_id: entry.reply_to ? entry.reply_to.id : null,
+                attachment_ids: (entry.attachments || []).map(function (a) { return a.id; })
             }).then(function (res) {
                 if (res.status === 200 && res.data.event) {
-                    forget(text);
+                    forget(entry.client_id);
                     confirm(bubble, res.data.event);
                     return;
                 }
                 if ([401, 404, 419, 422, 429].indexOf(res.status) !== -1) {
-                    // Refus définitif : le texte revient dans la zone de saisie, rien n'est perdu.
-                    forget(text);
+                    // Refus définitif : le texte et les pièces reviennent dans la zone de saisie, rien n'est perdu.
+                    forget(entry.client_id);
                     bubble.remove();
-                    restore(text);
+                    restore(entry);
                     if (res.status === 401 || res.status === 419) { sessionExpired(); return; }
-                    error.textContent = res.status === 404 ? 'Vous ne faites plus partie de cette conversation.'
-                        : (res.data.errors && res.data.errors.body) || res.data.error || 'Message refusé.';
-                    error.hidden = false;
+                    if (res.status === 404) { error.textContent = 'Vous ne faites plus partie de cette conversation.'; error.hidden = false; return; }
+                    showError(res.data, 'Message refusé.');
                     return;
                 }
                 throw new Error('network');
-            }).catch(function () { if (bubble.isConnected) { failed(bubble, text); } });
+            }).catch(function () { if (bubble.isConnected) { failed(bubble, entry); } });
         };
         // La bulle provisoire devient le message confirmé (pas de seconde annonce au lecteur d'écran).
         var confirm = function (bubble, ev) {
             if (box.querySelector('[data-event-id="' + ev.id + '"]')) { bubble.remove(); return; }
             bubble.setAttribute('data-event-id', String(ev.id));
+            bubble.setAttribute('data-message-id', String(ev.message_id));
+            bubble.setAttribute('data-created', ev.created_at);
+            bubble.id = 'm' + ev.message_id;
             bubble.classList.remove('is-pending', 'is-failed');
-            delete bubble.dataset.text;
+            bubble.removeAttribute('data-client-id');
             var t = bubble.querySelector('.kb-msg-time');
             t.textContent = hour(ev.created_at); t.dateTime = ev.created_at;
             seen[ev.id] = true;
             lastEvent = Math.max(lastEvent, ev.id);
         };
-        var failed = function (bubble, text) {
+        var failed = function (bubble, entry) {
             bubble.classList.remove('is-pending');
             bubble.classList.add('is-failed');
             var t = bubble.querySelector('.kb-msg-time');
@@ -354,31 +503,179 @@
             retry.addEventListener('click', function () {
                 bubble.classList.remove('is-failed'); bubble.classList.add('is-pending');
                 t.textContent = 'Envoi…';
-                send(text, bubble);
+                // Même client_id : si le premier envoi était arrivé, le serveur renvoie le message existant.
+                send(entry, bubble);
             });
             t.appendChild(retry);
+        };
+
+        var saveEdit = function (messageId, text) {
+            return post('api/chat/messages/' + messageId + '/edit', { body: text }).then(function (res) {
+                if (res.status === 200 && res.data.event) { updateMessage(res.data.event); seen[res.data.event.id] = true; return true; }
+                if (res.status === 401 || res.status === 419) { sessionExpired(); return false; }
+                showError(res.data, 'Modification impossible.');
+                return false;
+            }).catch(function () { showError(null, 'Réseau indisponible : la modification n\'a pas été enregistrée.'); return false; });
         };
 
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             var text = input.value.replace(/\s+$/, '');
-            if (text.trim() === '' || stopped) { input.focus(); return; }
+            if (stopped) { input.focus(); return; }
+            if (editing) {
+                if (text.trim() === '') { input.focus(); return; }
+                var id = editing;
+                saveEdit(id, text).then(function (ok) { if (ok) { cancelMode(); input.focus(); } });
+                return;
+            }
+            if (files && files.busy()) { return; }
+            var attachments = files ? files.pending() : [];
+            if (text.trim() === '' && attachments.length === 0) { input.focus(); return; }
+            var entry = { text: text, client_id: pendingClientId || newClientId(), attachments: attachments, reply_to: replyTo };
+            pendingClientId = null;
             // Bulle provisoire : le texte reste visible même si le réseau du chantier lâche.
-            var bubble = buildEvent({ id: 0, type: 'message', sender_id: me, body: text, created_at: new Date().toISOString() });
+            var bubble = buildEvent({
+                id: 0, type: 'message', sender_id: me, body: text, created_at: new Date().toISOString(), reply_to: replyTo,
+                attachments: attachments.map(function (a) { return { id: a.id, kind: a.kind, name: a.name, size: a.size, thumb_url: a.thumb_url, url: base + 'chat/attachments/' + a.id }; })
+            });
             bubble.removeAttribute('data-event-id');
-            bubble.dataset.text = text;
+            bubble.setAttribute('data-client-id', entry.client_id);
             bubble.classList.add('is-pending');
             bubble.querySelector('.kb-msg-time').textContent = 'Envoi…';
             var empty = box.querySelector('[data-chat-empty]');
             if (empty) { empty.remove(); }
             box.appendChild(bubble);
             scrollBottom();
-            keep(text);
+            keep(entry);
             input.value = ''; store(draftKey, ''); grow();
+            if (files) { files.clear(); }
+            replyTo = null; banner.hidden = true;
             input.focus();
             lastInteraction = Date.now();
-            send(text, bubble).then(function () { schedule(0); });
+            send(entry, bubble).then(function () { schedule(0); });
         });
+
+        // --- Actions sur un message : PC au survol (bouton « Actions »), téléphone par appui long ---
+        var menu = null, menuFor = null;
+        var closeMenu = function () {
+            if (!menu) { return; }
+            menu.remove(); menu = null;
+            var btn = menuFor && menuFor.querySelector('[data-msg-actions]');
+            if (btn) { btn.setAttribute('aria-expanded', 'false'); }
+            menuFor = null;
+        };
+        var item = function (label, name, attr, value) {
+            var b = el('button', 'kb-msg-menu-item');
+            b.type = 'button'; b.setAttribute('role', 'menuitem'); b.setAttribute(attr, value);
+            if (name) { b.appendChild(icon(name)); }
+            b.appendChild(el('span', '', label));
+            return b;
+        };
+        var openMenu = function (li, anchor) {
+            closeMenu();
+            menuFor = li;
+            menu = el('div', 'kb-msg-menu');
+            menu.setAttribute('role', 'menu'); menu.setAttribute('aria-label', 'Actions sur le message');
+            var deleted = li.getAttribute('data-deleted') === '1';
+            if (!deleted) {
+                var row = el('div', 'kb-msg-menu-reactions');
+                REACTIONS.forEach(function (emo) {
+                    var b = el('button', 'kb-msg-menu-react', emo);
+                    b.type = 'button'; b.setAttribute('role', 'menuitem'); b.setAttribute('data-menu-react', emo); b.setAttribute('aria-label', 'Réagir ' + emo);
+                    row.appendChild(b);
+                });
+                menu.appendChild(row);
+                menu.appendChild(item('Répondre', 'reply', 'data-menu', 'reply'));
+            }
+            var recent = Date.now() - new Date(li.getAttribute('data-created')).getTime() < EDIT_WINDOW;
+            if (li.getAttribute('data-mine') === '1' && !deleted && recent) {
+                if (li.querySelector('.kb-msg-text')) { menu.appendChild(item('Modifier', 'pencil', 'data-menu', 'edit')); }
+                menu.appendChild(item('Supprimer', 'trash-2', 'data-menu', 'delete'));
+            }
+            li.appendChild(menu);
+            if (anchor) { anchor.setAttribute('aria-expanded', 'true'); }
+            if (window.lucide) { window.lucide.createIcons(); }
+            var first = menu.querySelector('button');
+            if (first) { first.focus(); }
+        };
+        var react = function (messageId, emoji) {
+            post('api/chat/messages/' + messageId + '/reactions', { emoji: emoji }).then(function (res) {
+                if (res.status === 200 && res.data.event) { updateMessage(res.data.event); seen[res.data.event.id] = true; }
+                else if (res.status === 401 || res.status === 419) { sessionExpired(); }
+                else { showError(res.data, 'Réaction impossible.'); }
+            }).catch(function () { showError(null, 'Réseau indisponible.'); });
+        };
+        var deleteForm = document.querySelector('[data-chat-delete]'), toDelete = null;
+        deleteForm.addEventListener('submit', function (e) {
+            // La fenêtre de confirmation (app.js) a déjà été validée quand cet envoi arrive ici.
+            e.preventDefault();
+            if (!toDelete) { return; }
+            var id = toDelete; toDelete = null;
+            post('api/chat/messages/' + id + '/delete', {}).then(function (res) {
+                if (res.status === 200 && res.data.event) { updateMessage(res.data.event); seen[res.data.event.id] = true; }
+                else if (res.status === 401 || res.status === 419) { sessionExpired(); }
+                else { showError(res.data, 'Suppression impossible.'); }
+            }).catch(function () { showError(null, 'Réseau indisponible : le message n\'a pas été supprimé.'); });
+        });
+        var excerptOf = function (li) {
+            var text = li.querySelector('.kb-msg-text');
+            var t = text ? text.textContent.trim() : li.querySelector('.kb-msg-photo') ? 'Photo' : li.querySelector('.kb-msg-file-name') ? 'Fichier : ' + li.querySelector('.kb-msg-file-name').textContent : '';
+            return t.length > 80 ? t.slice(0, 80) + '…' : t;
+        };
+        var authorOf = function (li) {
+            if (li.getAttribute('data-mine') === '1') { return 'vous'; }
+            var a = li.querySelector('.kb-msg-author'), hidden = li.querySelector('.kb-msg-bubble > .visually-hidden');
+            return a ? a.textContent : hidden ? hidden.textContent.replace(/ : $/, '') : '';
+        };
+
+        box.addEventListener('click', function (e) {
+            // Premier élément du chemin encore utilisable (voir composedPath plus bas).
+            var t = e.composedPath().filter(function (n) { return n.closest && n.isConnected; })[0];
+            if (!t) { return; }
+            var btn = t.closest('[data-msg-actions]');
+            if (btn) { var host = btn.closest('.kb-msg'); if (menuFor === host) { closeMenu(); } else { openMenu(host, btn); } return; }
+            var reactBtn = t.closest('.kb-msg-reactions [data-react]');
+            if (reactBtn) { react(reactBtn.closest('.kb-msg').getAttribute('data-message-id'), reactBtn.getAttribute('data-react')); return; }
+            var choice = t.closest('.kb-msg-menu [data-menu], .kb-msg-menu [data-menu-react]');
+            if (!choice || !menuFor) { return; }
+            var li = menuFor, id = li.getAttribute('data-message-id');
+            closeMenu();
+            if (choice.hasAttribute('data-menu-react')) { react(id, choice.getAttribute('data-menu-react')); return; }
+            var action = choice.getAttribute('data-menu');
+            if (action === 'reply') {
+                editing = null;
+                replyTo = { id: parseInt(id, 10), sender_name: authorOf(li), excerpt: excerptOf(li) };
+                setMode('Réponse à ' + replyTo.sender_name + ' : ' + replyTo.excerpt);
+                input.focus();
+            } else if (action === 'edit') {
+                replyTo = null; editing = id;
+                input.value = li.querySelector('.kb-msg-text').textContent; grow();
+                setMode('Modification du message');
+                input.focus();
+            } else if (action === 'delete') {
+                toDelete = id;
+                deleteForm.requestSubmit();
+            }
+        });
+        // Appui long (500 ms) sur un message : menu d'actions sur téléphone.
+        var pressTimer = null;
+        box.addEventListener('touchstart', function (e) {
+            var li = e.target.closest && e.target.closest('.kb-msg[data-message-id]');
+            if (!li || e.target.closest('a, button')) { return; }
+            pressTimer = setTimeout(function () { pressTimer = null; openMenu(li, null); }, 500);
+        }, { passive: true });
+        ['touchend', 'touchmove', 'touchcancel'].forEach(function (type) {
+            box.addEventListener(type, function () { clearTimeout(pressTimer); }, { passive: true });
+        });
+        box.addEventListener('contextmenu', function (e) { if (menu && e.target.closest('.kb-msg')) { e.preventDefault(); } });
+        // composedPath : lucide.createIcons() redessine les icônes et peut détacher la cible du clic du document.
+        document.addEventListener('click', function (e) {
+            var inside = e.composedPath().some(function (n) { return n.matches && n.matches('.kb-msg-menu, [data-msg-actions]'); });
+            if (menu && !inside) { closeMenu(); }
+        });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && menu) { var li = menuFor; closeMenu(); var b = li && li.querySelector('[data-msg-actions]'); if (b && !b.hidden) { b.focus(); } } });
+        // Boutons « Actions » des messages rendus par le serveur : visibles avec une souris.
+        if (finePointer) { box.querySelectorAll('[data-msg-actions]').forEach(function (b) { b.hidden = false; }); }
     }
 
     if (box) { scrollBottom(); }

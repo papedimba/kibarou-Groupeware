@@ -215,6 +215,81 @@ async function minBorderContrast(p, selector) {
     assert.strictEqual(await page.inputValue('#chat-body'), 'Brouillon ' + text, 'brouillon retrouvé après rechargement');
     await page.fill('#chat-body', '');
     await page.locator('#chat-body').dispatchEvent('input');
+    // Lot 4b : photo réduite avant envoi, réponse, réaction, modification, suppression, pas de doublon.
+    // B a été déconnecté par le contrôle précédent : nouvelle connexion.
+    await pageB.goto(base + '/login');
+    await pageB.fill('#email', process.env.KB_DEMO_EMAIL);
+    await pageB.fill('#password', process.env.KB_DEMO_PASSWORD);
+    await pageB.click('button[type=submit]');
+    await pageB.waitForURL(base + '/');
+    await pageB.goto(conversationUrl);
+    await pageB.fill('#chat-body', '');
+    await pageB.locator('#chat-body').dispatchEvent('input');
+    await page.goto(conversationUrl);
+    const bigPhoto = require('path').join(require('os').tmpdir(), 'kb-smoke-photo.jpg');
+    execFileSync('php', ['-r', `$i = imagecreatetruecolor(4000, 3000); for ($k = 0; $k < 300; $k++) imagefilledellipse($i, rand(0, 4000), rand(0, 3000), rand(50, 600), rand(50, 600), imagecolorallocate($i, rand(0, 255), rand(0, 255), rand(0, 255))); imagejpeg($i, getenv('KB_PHOTO'), 95);`], { env: { ...process.env, KB_PHOTO: bigPhoto } });
+    const originalSize = require('fs').statSync(bigPhoto).size;
+    await pageB.setInputFiles('[data-chat-file]', bigPhoto);
+    await pageB.locator('.kb-tray-item.is-done').waitFor({ timeout: 15000 });
+    const uploaded = parseInt(await pageB.getAttribute('.kb-tray-item.is-done', 'data-bytes'), 10);
+    assert.ok(uploaded > 0 && uploaded < originalSize, `photo réduite avant envoi (${uploaded} < ${originalSize})`);
+    const photoText = 'Photo ' + Date.now();
+    await pageB.fill('#chat-body', photoText);
+    await pageB.keyboard.press('Enter');
+    await page.locator('.kb-msg', { hasText: photoText }).locator('.kb-msg-photo img').waitFor({ timeout: 8000 });
+    // A répond au message de B.
+    const msgOfB = page.locator('.kb-msg', { hasText: photoText });
+    await msgOfB.hover();
+    await msgOfB.locator('[data-msg-actions]').click();
+    await page.locator('.kb-msg-menu [data-menu="reply"]').click();
+    const replyText = 'Réponse ' + Date.now();
+    await page.fill('#chat-body', replyText);
+    await page.keyboard.press('Enter');
+    await pageB.locator('.kb-msg', { hasText: replyText }).locator('.kb-msg-reply', { hasText: photoText }).waitFor({ timeout: 8000 });
+    // B réagit 👍 au message de A, puis modifie son propre message.
+    const msgOfA = pageB.locator('.kb-msg', { hasText: replyText });
+    await msgOfA.hover();
+    await msgOfA.locator('[data-msg-actions]').click();
+    await pageB.locator('.kb-msg-menu [data-menu-react="👍"]').click();
+    await page.locator('.kb-msg', { hasText: replyText }).locator('.kb-reaction[data-react="👍"]').waitFor({ timeout: 8000 });
+    const mine = pageB.locator('.kb-msg.is-mine', { hasText: photoText });
+    await mine.hover();
+    await mine.locator('[data-msg-actions]').click();
+    await pageB.locator('.kb-msg-menu [data-menu="edit"]').click();
+    await pageB.fill('#chat-body', photoText + ' (corrigé)');
+    await pageB.keyboard.press('Enter');
+    await page.locator('.kb-msg', { hasText: photoText + ' (corrigé)' }).locator('.kb-msg-edited').waitFor({ timeout: 8000 });
+    // A supprime sa réponse.
+    const own = page.locator('.kb-msg.is-mine', { hasText: replyText });
+    await own.hover();
+    await own.locator('[data-msg-actions]').click();
+    await page.locator('.kb-msg-menu [data-menu="delete"]').click();
+    await page.locator('#kb-confirm [data-kb-confirm-ok]').click();
+    // Chez B, la bulle reste mais son texte est remplacé par « Message supprimé ».
+    await pageB.locator('.kb-msg', { hasText: replyText }).waitFor({ state: 'detached', timeout: 8000 });
+    assert.ok(await pageB.locator('.kb-msg[data-deleted="1"] .kb-msg-deleted').count() > 0, 'mention « Message supprimé » chez l\'autre');
+    // Réponse perdue puis « Réessayer » : un seul message (même client_id).
+    const once = 'Une fois ' + Date.now();
+    // La 1re requête atteint le serveur mais sa réponse est perdue.
+    let calls = 0;
+    await pageB.route('**/messages', async r => {
+      calls++;
+      if (calls > 1) { await r.continue(); return; }
+      // Le message part réellement vers le serveur (fetch de Node, sans proxy), mais la réponse ne revient pas au navigateur.
+      const req = r.request();
+      await fetch(req.url(), { method: 'POST', headers: await req.allHeaders(), body: req.postDataBuffer() });
+      await r.abort();
+    });
+    await pageB.fill('#chat-body', once);
+    await pageB.keyboard.press('Enter');
+    // Deux issues correctes : la bulle « Non envoyé » est retirée par l'interrogation suivante (le serveur a le message),
+    // ou l'on clique « Réessayer » et le serveur renvoie le message existant (même client_id).
+    await pageB.locator('.kb-msg-retry').click({ timeout: 1500 }).catch(() => {});
+    await pageB.locator('.kb-msg.is-mine:not(.is-pending):not(.is-failed)', { hasText: once }).waitFor({ timeout: 8000 });
+    await pageB.unroute('**/messages');
+    await page.locator('.kb-msg', { hasText: once }).first().waitFor({ timeout: 8000 });
+    await page.waitForTimeout(4000);
+    assert.strictEqual(await page.locator('.kb-msg', { hasText: once }).count(), 1, 'un seul message après Réessayer');
     await other.close();
   } else {
     console.log('Messagerie à deux comptes ignorée : KB_DEMO_EMAIL / KB_DEMO_PASSWORD absents.');

@@ -101,10 +101,22 @@ $me = (int) $currentUser['id'];
 
             <form class="kb-chat-compose" method="post" action="<?= e(url("/chat/$cid")) ?>" data-chat-form>
                 <?= csrf_field() ?>
+                <div class="kb-chat-banner" data-chat-banner hidden>
+                    <span class="kb-chat-banner-text" data-chat-banner-text></span>
+                    <button type="button" class="btn btn-link btn-sm" data-chat-banner-cancel>Annuler</button>
+                </div>
+                <ul class="kb-chat-tray" data-chat-tray aria-label="Pièces jointes à envoyer" hidden></ul>
+                <label class="btn btn-light kb-chat-attach" data-chat-attach hidden>
+                    <i data-lucide="paperclip" aria-hidden="true"></i><span class="visually-hidden">Joindre des photos ou des fichiers</span>
+                    <input type="file" class="visually-hidden" data-chat-file multiple accept="image/*,.pdf,.docx,.xlsx">
+                </label>
                 <label class="visually-hidden" for="chat-body">Votre message</label>
                 <textarea class="form-control<?= invalid($errors, 'body') ?>" id="chat-body" name="body" rows="1" maxlength="4000" placeholder="Votre message" required><?= e($old['body'] ?? '') ?></textarea>
                 <button class="btn btn-primary kb-chat-send" type="submit"><i data-lucide="send" aria-hidden="true"></i><span class="visually-hidden">Envoyer</span></button>
                 <?= field_error($errors, 'body') ?>
+            </form>
+            <form hidden data-chat-delete action="#" data-confirm="Supprimer ce message ? Il sera remplacé par « Message supprimé » pour tout le monde, et ses fichiers seront effacés." data-confirm-action="Supprimer" data-confirm-danger>
+                <button type="submit">Supprimer</button>
             </form>
         </section>
     <?php endif; ?>

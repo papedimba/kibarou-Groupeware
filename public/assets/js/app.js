@@ -71,7 +71,7 @@
 
     // Anti double envoi (réseau de chantier lent) : le bouton est désactivé après le premier envoi.
     // Le formulaire de la messagerie gère lui-même ses envois (chat.js).
-    document.querySelectorAll('form:not([data-chat-form])').forEach(function (form) {
+    document.querySelectorAll('form:not([data-chat-form]):not([data-chat-delete])').forEach(function (form) {
         form.addEventListener('submit', function (event) {
             if (event.defaultPrevented) { return; }
             if (form.dataset.sending === '1') { event.preventDefault(); return; }
