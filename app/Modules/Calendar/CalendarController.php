@@ -40,8 +40,9 @@ final class CalendarController extends Controller
         foreach ($events as $e) {
             $this->place($e, $days);
         }
-        foreach ($days as &$day) {
+        foreach ($days as $key => &$day) {
             $day['timed'] = $this->lanes($day['timed']);
+            $day['presence'] = $this->presenceOn((int) $this->user()['id'], $key);
         }
         unset($day);
         $step = ['week' => '+1 week', 'month' => '+1 month', 'list' => '+60 days'][$view];
@@ -51,6 +52,70 @@ final class CalendarController extends Controller
             'prev' => $date->modify($back)->format('Y-m-d'), 'next' => $date->modify($step)->format('Y-m-d'),
             'firstHour' => self::FIRST_HOUR, 'lastHour' => self::LAST_HOUR,
         ]);
+    }
+
+    /**
+     * Disponibilités : jusqu'à 10 personnes sur 7 jours à partir de la date ; « Occupé » et statut de présence, sans détail.
+     */
+    public function availability(Request $request): Response
+    {
+        $svc = $this->app->events();
+        $tz = $svc->timezone();
+        $start = DateTimeImmutable::createFromFormat('!Y-m-d', $request->str('date'), $tz) ?: new DateTimeImmutable('today', $tz);
+        $ids = array_values(array_unique($request->intList('users')));
+        $error = count($ids) > 10 ? 'Dix personnes au plus.' : null;
+        $ids = $ids === [] ? [(int) $this->user()['id']] : array_slice($ids, 0, 10);
+        $end = $start->modify('+7 days');
+        $busy = (new EventRepository($this->app->db()))->busy($ids, $svc->toUtc($start->format('Y-m-d 00:00')), $svc->toUtc($end->format('Y-m-d 00:00')),
+            $start->format('Y-m-d'), $end->modify('-1 day')->format('Y-m-d'));
+        $grid = [];
+        foreach ($ids as $uid) {
+            for ($d = $start; $d < $end; $d = $d->modify('+1 day')) {
+                $key = $d->format('Y-m-d');
+                $cell = ['busy' => [], 'presence' => $this->presenceOn($uid, $key, true)];
+                foreach ($busy[$uid] ?? [] as $b) {
+                    if ((int) $b['all_day'] === 1) {
+                        if ($key >= $b['start_date'] && $key <= $b['end_date']) {
+                            $cell['busy'][] = 'Occupé toute la journée';
+                        }
+                        continue;
+                    }
+                    $s = $svc->toLocal((string) $b['start_at']);
+                    $e = $svc->toLocal((string) $b['end_at']);
+                    if ($s < $d->modify('+1 day') && $e > $d) {
+                        $cell['busy'][] = 'Occupé ' . max($s, $d)->format('H:i') . '–' . ($e >= $d->modify('+1 day') ? '24:00' : $e->format('H:i'));
+                    }
+                }
+                $grid[$uid][$key] = $cell;
+            }
+        }
+        $people = (new \App\Modules\Users\UserRepository($this->app->db()))->options();
+        return $this->view('calendar/availability', [
+            'currentPath' => '/calendar', 'start' => $start, 'grid' => $grid, 'selected' => $ids, 'people' => $people, 'error' => $error,
+            'names' => array_column($people, 'name', 'id') + [(int) $this->user()['id'] => 'Moi'],
+        ]);
+    }
+
+    /** @var array<int,array<string,mixed>|null> */
+    private array $presence = [];
+
+    /**
+     * Statut de présence en cours, prolongé jusqu'à sa date de fin (pas de statut déclaré à l'avance, décision du lot 2).
+     * « Au bureau » n'est pas affiché ; $flag ajoute l'indisponibilité (congé, absence).
+     * @return array{label:string,off:bool}|null
+     */
+    private function presenceOn(int $userId, string $day, bool $flag = false): ?array
+    {
+        if (!array_key_exists($userId, $this->presence)) {
+            $this->presence[$userId] = $this->app->presence()->current([$userId])[$userId] ?? null;
+        }
+        $p = $this->presence[$userId];
+        $today = $this->app->presence()->today();
+        if ($p === null || $p['status'] === 'office' || $day < $today || $day > ($p['until_date'] ?? $today)) {
+            return null;
+        }
+        $label = $p['label'] . (!empty($p['site_label']) ? ' · ' . $p['site_label'] : '');
+        return ['label' => $label, 'off' => in_array($p['status'], ['leave', 'absent'], true)];
     }
 
     /** Range l'évènement dans chacun des jours qu'il touche. @param array<string,mixed> $e @param array<string,array<string,mixed>> $days */

@@ -38,6 +38,29 @@ final class EventRepository
         );
     }
 
+    /**
+     * Créneaux occupés de plusieurs personnes, sans aucun détail : évènements confirmés, non privés, non déclinés.
+     * @param list<int> $userIds @return array<int,list<array<string,mixed>>>
+     */
+    public function busy(array $userIds, string $fromUtc, string $toUtc, string $fromDate, string $toDate): array
+    {
+        if ($userIds === []) {
+            return [];
+        }
+        $rows = $this->db->fetchAll(
+            "SELECT p.user_id, e.all_day, e.start_at, e.end_at, e.start_date, e.end_date FROM event_participants p JOIN events e ON e.id = p.event_id
+             WHERE p.user_id IN (" . implode(',', array_fill(0, count($userIds), '?')) . ") AND p.response <> 'no' AND e.status = 'confirmed' AND e.is_private = 0
+               AND ((e.all_day = 0 AND e.start_at < ? AND e.end_at > ?) OR (e.all_day = 1 AND e.start_date <= ? AND e.end_date >= ?))
+             ORDER BY COALESCE(e.start_at, e.start_date)",
+            [...$userIds, $toUtc, $fromUtc, $toDate, $fromDate],
+        );
+        $out = [];
+        foreach ($rows as $r) {
+            $out[(int) $r['user_id']][] = $r;
+        }
+        return $out;
+    }
+
     /** @return list<array<string,mixed>> */
     public function participants(int $eventId): array
     {

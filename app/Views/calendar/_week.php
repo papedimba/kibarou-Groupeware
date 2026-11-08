@@ -11,7 +11,7 @@ $names = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
                 <?php foreach ($day['allday'] as $e): ?>
                     <?= $this->partial('calendar/_event_link', ['e' => $e, 'class' => 'kb-cal-allday']) ?>
                 <?php endforeach; ?>
-                <?php if (!empty($day['presence'])): ?><span class="kb-cal-presence"><?= e($day['presence']) ?></span><?php endif; ?>
+                <?php if (!empty($day['presence'])): ?><span class="kb-cal-presence"><?= e($day['presence']['label']) ?></span><?php endif; ?>
             </div>
         <?php endforeach; ?>
     </div>

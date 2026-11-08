@@ -65,6 +65,7 @@ return static function (Router $r): void {
 
         $r->group(['perm:calendar.use'], static function (Router $r) {
             $r->get('/calendar', [CalendarController::class, 'index']);
+            $r->get('/calendar/availability', [CalendarController::class, 'availability']);
             $r->get('/calendar/events/new', [EventController::class, 'newForm']);
             $r->post('/calendar/events', [EventController::class, 'create']);
             $r->get('/calendar/events/{id}', [EventController::class, 'show']);
